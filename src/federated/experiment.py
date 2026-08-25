@@ -1,7 +1,7 @@
 """
 Federated Learning Experiment Orchestrator.
-Manages partitioning, client lifecycle, communication rounds, FedAvg / FedProx aggregation,
-round-by-round validation tracking, communication cost accounting, and final test evaluation.
+Manages partitioning, client lifecycle, communication rounds, FedAvg / FedProx / DP / SecAgg aggregation,
+round-by-round validation tracking, privacy accounting, and final locked test evaluation.
 """
 
 import os
@@ -23,12 +23,14 @@ from .fedavg import aggregate_fedavg
 from .evaluation import evaluate_model, DEFAULT_CLASS_NAMES
 from .utils import set_seed, get_system_metadata, compute_communication_cost
 from .plot_utils import generate_experiment_plots
+from .dp_accountant import RDPPrivacyAccountant
+from .secure_aggregation import SecureAggregationEngine, verify_secure_aggregation_cancellation
 
 
 class FederatedExperiment:
     """
     Federated Learning Experiment Manager.
-    Supports FedAvg and FedProx with Dirichlet / IID data partitions.
+    Supports FedAvg, FedProx, Differential Privacy (DP-SGD), and Secure Aggregation (SecAgg).
     """
 
     def __init__(
@@ -54,6 +56,11 @@ class FederatedExperiment:
 
         self.algorithm = config.get("algorithm", "FedAvg")
         self.mu = float(config.get("mu", 0.0))
+        self.dp_enabled = bool(config.get("dp_enabled", False))
+        self.clip_norm = float(config.get("clip_norm", 1.0))
+        self.noise_multiplier = float(config.get("noise_multiplier", 1.0))
+        self.target_delta = float(config.get("target_delta", 1e-5))
+        self.secagg_enabled = bool(config.get("secagg_enabled", False))
 
         default_name = config.get("experiment_name", "dirichlet_a01")
         self.output_dir = output_dir or pathlib.Path(f"models/federated/{default_name}")
@@ -77,6 +84,22 @@ class FederatedExperiment:
         self.partition_type = config.get("partition_type", "dirichlet")
         self.dirichlet_alpha = config.get("dirichlet_alpha", 0.1)
         self.device = config.get("device", "cpu")
+
+        # Privacy Accountant initialization
+        if self.dp_enabled:
+            self.accountant = RDPPrivacyAccountant(target_delta=self.target_delta)
+        else:
+            self.accountant = None
+
+        # Secure Aggregation Engine initialization
+        if self.secagg_enabled:
+            self.secagg_engine = SecureAggregationEngine(
+                num_clients=self.num_clients,
+                mask_variance=10.0,
+                seed=self.seed,
+            )
+        else:
+            self.secagg_engine = None
 
     def run_pre_training_assertions(self) -> None:
         """
@@ -115,10 +138,19 @@ class FederatedExperiment:
         """
         Execute full federated learning training workflow.
         """
-        exp_name = self.config.get("experiment_name", "fedprox_a01_mu001")
-        print("\n" + "=" * 75)
-        print(f"  Federated Learning Experiment: {exp_name} ({self.algorithm}, mu={self.mu})")
-        print("=" * 75)
+        exp_name = self.config.get("experiment_name", "dirichlet_a01")
+        privacy_tags = []
+        if self.dp_enabled:
+            privacy_tags.append(f"DP(sigma={self.noise_multiplier}, C={self.clip_norm})")
+        if self.secagg_enabled:
+            privacy_tags.append("SecAgg")
+        if self.mu > 0.0:
+            privacy_tags.append(f"FedProx(mu={self.mu})")
+        tag_str = ", ".join(privacy_tags) if privacy_tags else "Plaintext FedAvg"
+
+        print("\n" + "=" * 80)
+        print(f"  Federated Learning Experiment: {exp_name} [{tag_str}]")
+        print("=" * 80)
 
         # 1. Run assertions
         print("\n[Step 1/6] Running automated data validation checks...")
@@ -189,10 +221,10 @@ class FederatedExperiment:
         print(f"    - Total {self.num_rounds}-round communication: {comm_cost['total_mb_all_rounds']:.2f} MB")
 
         # 5. Federated Training Loop
-        print(f"\n[Step 5/6] Starting Federated Training ({self.algorithm}, {self.num_rounds} global rounds, {num_active_clients} clients/round, mu={self.mu})...")
-        print("=" * 95)
-        print(f"{'Round':<7} | {'Val Loss':<10} | {'Val Accuracy':<14} | {'Val Macro F1':<14} | {'Val W-F1':<10} | {'Round Time':<12} | {'Cumul. MB':<10}")
-        print("-" * 95)
+        print(f"\n[Step 5/6] Starting Federated Training ({tag_str}, {self.num_rounds} global rounds)...")
+        print("=" * 105)
+        print(f"{'Round':<7} | {'Val Loss':<10} | {'Val Accuracy':<14} | {'Val Macro F1':<14} | {'Val W-F1':<10} | {'Epsilon (ε)':<12} | {'Round Time':<11} | {'Cumul. MB':<10}")
+        print("-" * 105)
 
         round_history = []
         best_val_macro_f1 = 0.0
@@ -208,7 +240,17 @@ class FederatedExperiment:
             "learning_rate": self.learning_rate,
             "weight_decay": self.weight_decay,
             "mu": self.mu,
+            "dp_enabled": self.dp_enabled,
+            "clip_norm": self.clip_norm,
+            "noise_multiplier": self.noise_multiplier,
         }
+
+        # Calculate average steps per round across clients for privacy accountant
+        avg_client_samples = len(self.X_train) / self.num_clients
+        steps_per_client_per_round = int(self.local_epochs * math.ceil(avg_client_samples / self.batch_size))
+        sampling_rate_q = min(1.0, float(self.batch_size) / float(avg_client_samples))
+
+        secagg_verification_results = []
 
         for round_idx in range(1, self.num_rounds + 1):
             round_t0 = time.perf_counter()
@@ -216,23 +258,72 @@ class FederatedExperiment:
             # 5a. Broadcast global state dict to participating clients
             current_global_state = copy.deepcopy(global_model.state_dict())
             client_updates = []
+            client_metrics_list = []
 
-            # 5b. Local training on each client (FedProx proximal regularizer applied if mu > 0)
+            # 5b. Local training on each client (DP-SGD or Standard SGD/AdamW)
             for client in clients:
                 updated_state, n_k, local_metrics = client.train(
                     current_global_state,
                     client_train_config,
                 )
                 client_updates.append((updated_state, n_k))
+                client_metrics_list.append(local_metrics)
 
-            # 5c. Server Aggregation via Sample-Weighted parameter averaging
-            new_global_state = aggregate_fedavg(client_updates)
+            # 5c. Server Aggregation: Secure Aggregation vs Standard Plaintext
+            total_train_samples = sum(n_k for _, n_k in client_updates)
+            client_ids = list(range(len(client_updates)))
+
+            if self.secagg_enabled:
+                # Mask client updates
+                masked_updates = []
+                for c_id, (c_state, n_k) in enumerate(client_updates):
+                    w = float(n_k) / float(total_train_samples)
+                    masked_u = self.secagg_engine.mask_client_update(
+                        client_id=c_id,
+                        client_state_dict=c_state,
+                        weight=w,
+                        participating_client_ids=client_ids,
+                        round_idx=round_idx,
+                    )
+                    masked_updates.append(masked_u)
+
+                # Server aggregates masked updates (plaintext individual updates are never accessed)
+                new_global_state, _ = self.secagg_engine.aggregate_masked_updates(
+                    masked_updates=masked_updates,
+                    template_state_dict=current_global_state,
+                )
+
+                # Verification check in round 1 and every 10 rounds
+                if round_idx == 1 or round_idx % 10 == 0:
+                    v_res = verify_secure_aggregation_cancellation(client_updates, self.secagg_engine, round_idx=round_idx)
+                    secagg_verification_results.append({
+                        "round": round_idx,
+                        "max_cancellation_error": v_res["max_cancellation_error"],
+                        "passed": v_res["passed"],
+                    })
+            else:
+                new_global_state = aggregate_fedavg(client_updates)
+
             global_model.load_state_dict(new_global_state)
+
+            # 5d. Privacy Accounting Step
+            if self.dp_enabled:
+                p_record = self.accountant.step(
+                    q=sampling_rate_q,
+                    sigma=self.noise_multiplier,
+                    steps_in_round=steps_per_client_per_round,
+                    round_idx=round_idx,
+                )
+                current_eps_str = f"{p_record['cumulative_epsilon']:.2f}"
+                current_eps_val = p_record["cumulative_epsilon"]
+            else:
+                current_eps_str = "None (Plain)"
+                current_eps_val = None
 
             round_elapsed = time.perf_counter() - round_t0
             cumul_comm_mb = round((comm_cost["total_bytes_per_round"] * round_idx) / (1024.0 * 1024.0), 2)
 
-            # 5d. Centralized Validation Evaluation
+            # 5e. Centralized Validation Evaluation
             val_metrics = evaluate_model(
                 global_model,
                 self.X_val,
@@ -246,7 +337,7 @@ class FederatedExperiment:
             val_loss = val_metrics["loss"]
             val_w_f1 = val_metrics["weighted_f1"]
 
-            # Save checkpoint if best validation Macro F1 (earlier round wins on tie)
+            # Save checkpoint if best validation Macro F1
             if val_macro_f1 > best_val_macro_f1:
                 best_val_macro_f1 = val_macro_f1
                 best_val_loss = val_loss
@@ -264,6 +355,8 @@ class FederatedExperiment:
                 "val_weighted_f1": val_w_f1,
                 "val_macro_precision": val_metrics["macro_precision"],
                 "val_macro_recall": val_metrics["macro_recall"],
+                "epsilon": current_eps_val,
+                "delta": self.target_delta if self.dp_enabled else None,
                 "per_class_f1": {c: val_metrics["per_class"][c]["f1_score"] for c in DEFAULT_CLASS_NAMES},
                 "round_time_seconds": round(round_elapsed, 2),
                 "cumulative_comm_mb": cumul_comm_mb,
@@ -271,10 +364,10 @@ class FederatedExperiment:
             round_history.append(round_record)
 
             if round_idx % 5 == 0 or round_idx == 1 or round_idx == self.num_rounds or is_best == "*":
-                print(f"Round {round_idx:2d}{is_best}| {val_loss:>8.4f}   | {val_acc*100:>11.2f}%   | {val_macro_f1:>12.4f}   | {val_w_f1:>8.4f}   | {round_elapsed:>8.2f}s    | {cumul_comm_mb:>8.2f} MB")
+                print(f"Round {round_idx:2d}{is_best}| {val_loss:>8.4f}   | {val_acc*100:>11.2f}%   | {val_macro_f1:>12.4f}   | {val_w_f1:>8.4f}   | {current_eps_str:>12} | {round_elapsed:>8.2f}s    | {cumul_comm_mb:>8.2f} MB")
 
         total_train_time = time.perf_counter() - experiment_t0
-        print("=" * 95)
+        print("=" * 105)
         print(f"    Federated training finished in {total_train_time:.2f}s ({self.num_rounds} rounds).")
         print(f"    Best Validation Round: Round {best_round} (Val Macro F1 = {best_val_macro_f1:.4f}, Val Acc = {round_history[best_round-1]['val_accuracy']*100:.2f}%)")
 
@@ -282,6 +375,12 @@ class FederatedExperiment:
         final_model_state = copy.deepcopy(global_model.state_dict())
         torch.save(best_model_state, self.output_dir / "best_model.pt")
         torch.save(final_model_state, self.output_dir / "final_model.pt")
+
+        # Extract privacy spent
+        privacy_summary = self.accountant.get_privacy_spent() if self.dp_enabled else None
+        if self.dp_enabled:
+            with open(self.output_dir / "privacy_accounting.json", "w") as f:
+                json.dump(privacy_summary, f, indent=2)
 
         # Save convergence JSON and training_history.json in model directory
         history_data = {
@@ -292,6 +391,8 @@ class FederatedExperiment:
             "best_val_macro_precision": round_history[best_round - 1]["val_macro_precision"],
             "best_val_macro_recall": round_history[best_round - 1]["val_macro_recall"],
             "best_val_weighted_f1": round_history[best_round - 1]["val_weighted_f1"],
+            "final_epsilon": privacy_summary["epsilon"] if self.dp_enabled else None,
+            "final_delta": self.target_delta if self.dp_enabled else None,
             "total_train_time_seconds": round(total_train_time, 2),
             "history": round_history,
         }
@@ -323,6 +424,12 @@ class FederatedExperiment:
                 "experiment_name": exp_name,
                 "algorithm": self.algorithm,
                 "mu": self.mu,
+                "dp_enabled": self.dp_enabled,
+                "clip_norm": self.clip_norm if self.dp_enabled else None,
+                "noise_multiplier": self.noise_multiplier if self.dp_enabled else None,
+                "target_delta": self.target_delta if self.dp_enabled else None,
+                "final_epsilon": privacy_summary["epsilon"] if self.dp_enabled else None,
+                "secagg_enabled": self.secagg_enabled,
                 "partition_type": self.partition_type,
                 "dirichlet_alpha": self.dirichlet_alpha,
                 "num_clients": self.num_clients,
@@ -337,14 +444,11 @@ class FederatedExperiment:
                 "best_round": best_round,
                 "system_metadata": get_system_metadata(),
                 "model_architecture": model_config,
-                "batchnorm_aggregation_details": (
-                    "Sample-weighted parameter aggregation is applied to all parameters and buffers: "
-                    "trainable weights (gamma), biases (beta), running_mean, and running_var. "
-                    "num_batches_tracked is preserved. This guarantees mathematically consistent batch normalization."
-                ),
             },
             "partition_validation": partition_validation,
             "communication_cost": comm_cost,
+            "privacy_accounting": privacy_summary,
+            "secagg_verification": secagg_verification_results,
             "best_validation_metrics": {
                 "round": best_round,
                 "accuracy": round_history[best_round - 1]["val_accuracy"],
@@ -391,8 +495,7 @@ class FederatedExperiment:
 
     def _write_markdown_report(self, report_file: pathlib.Path, results: Dict[str, Any]) -> None:
         """
-        Generate comprehensive, publication-grade scientific markdown report
-        with full multi-baseline comparison (Centralized MLP, IID FedAvg, Dirichlet a=1.0, Dirichlet a=0.5, Dirichlet a=0.1, FedProx a=0.1).
+        Generate comprehensive scientific markdown report.
         """
         meta = results["metadata"]
         comm = results["communication_cost"]
@@ -400,40 +503,9 @@ class FederatedExperiment:
         test = results["locked_test_metrics"]
         part = results["partition_validation"]
         het = part["heterogeneity_summary"]
-        exp_name = meta.get("experiment_name", "fedprox_a01_mu001")
-        alpha_val = meta.get("dirichlet_alpha", 0.1)
-        mu_val = meta.get("mu", 0.01)
-
-        # Benchmarks for comparison
-        centralized_test_acc = 91.28
-        centralized_test_macro_f1 = 0.8957
-        centralized_test_weighted_f1 = 0.9124
-        centralized_test_prec = 0.8986
-        centralized_test_rec = 0.8937
-
-        iid_test_acc = 90.19
-        iid_test_macro_f1 = 0.8853
-        iid_test_weighted_f1 = 0.9009
-        iid_test_prec = 0.8959
-        iid_test_rec = 0.8776
-
-        a10_test_acc = 89.80
-        a10_test_macro_f1 = 0.8781
-        a10_test_weighted_f1 = 0.8971
-        a10_test_prec = 0.8867
-        a10_test_rec = 0.8715
-
-        a05_test_acc = 89.93
-        a05_test_macro_f1 = 0.8845
-        a05_test_weighted_f1 = 0.8985
-        a05_test_prec = 0.8928
-        a05_test_rec = 0.8804
-
-        a01_test_acc = 69.92
-        a01_test_macro_f1 = 0.5836
-        a01_test_weighted_f1 = 0.6497
-        a01_test_prec = 0.5756
-        a01_test_rec = 0.6424
+        exp_name = meta.get("experiment_name", "privacy_exp")
+        dp_on = meta.get("dp_enabled", False)
+        secagg_on = meta.get("secagg_enabled", False)
 
         # Build client distribution table
         client_table_rows = []
@@ -452,10 +524,11 @@ class FederatedExperiment:
         # Build round progression sample table (every 5 rounds + key rounds)
         progression_rows = []
         for r in results["round_by_round_history"]:
-            if r["round"] % 5 == 0 or r["round"] == 1 or r["round"] == meta["best_round"]:
+            if r["round"] % 5 == 0 or r["round"] == 1 or r["round"] == meta["best_round"] or r["round"] == meta["num_rounds"]:
                 star = " 🌟 (Best)" if r["round"] == meta["best_round"] else ""
+                eps_val = f"{r['epsilon']:.2f}" if r["epsilon"] is not None else "N/A"
                 progression_rows.append(
-                    f"| Round {r['round']:02d}{star} | {r['val_loss']:.4f} | {r['val_accuracy']*100:.2f}% | {r['val_macro_f1']:.4f} | {r['val_weighted_f1']:.4f} | {r['cumulative_comm_mb']:.2f} MB |"
+                    f"| Round {r['round']:02d}{star} | {r['val_loss']:.4f} | {r['val_accuracy']*100:.2f}% | {r['val_macro_f1']:.4f} | {r['val_weighted_f1']:.4f} | {eps_val} | {r['cumulative_comm_mb']:.2f} MB |"
                 )
         progression_md = "\n".join(progression_rows)
 
@@ -468,147 +541,76 @@ class FederatedExperiment:
             )
         test_per_class_md = "\n".join(test_per_class_rows)
 
-        diff_acc_a01 = (test['accuracy'] - a01_test_acc / 100.0) * 100.0
-        diff_f1_a01 = test['macro_f1'] - a01_test_macro_f1
-        diff_wf1_a01 = test['weighted_f1'] - a01_test_weighted_f1
-        diff_prec_a01 = test['macro_precision'] - a01_test_prec
-        diff_rec_a01 = test['macro_recall'] - a01_test_rec
-
-        # Recovery calculation: (FedProx - FedAvg_a01) / (IID - FedAvg_a01)
-        recovery_acc = (diff_acc_a01 / (iid_test_acc - a01_test_acc)) * 100.0 if (iid_test_acc != a01_test_acc) else 0.0
-        recovery_f1 = (diff_f1_a01 / (iid_test_macro_f1 - a01_test_macro_f1)) * 100.0 if (iid_test_macro_f1 != a01_test_macro_f1) else 0.0
-
-        title_header = f"# Experiment 5 — FedProx under Extreme Non-IID (Dirichlet α = {alpha_val}, μ = {mu_val})"
+        title_header = f"# Experiment Report: {exp_name}"
 
         lines = [
             title_header,
             f"",
             f"**Generated:** {time.strftime('%Y-%m-%d %H:%M:%S')}  ",
             f"**Project:** Privacy-Preserving Malware Detection Using Federated Learning  ",
-            f"**Algorithm:** FedProx (Li et al., 2020) with Proximal Term Regularization (mu = {mu_val})  ",
-            f"**Partition Strategy:** Extreme Non-IID Dirichlet Distribution (alpha = {alpha_val}) across {meta['num_clients']} Clients  ",
+            f"**Algorithm:** {meta['algorithm']} (DP: {dp_on}, SecAgg: {secagg_on})  ",
             f"**Model Architecture:** PyTorch MLP (`MalwareMLP`, 156,037 parameters)  ",
             f"",
             f"---",
             f"",
-            f"## 1. Executive Summary & Multi-Experiment Comparison",
+            f"## 1. Executive Summary",
             f"",
-            f"In Experiment 5 (Phase 5E), we evaluated the **FedProx** optimization framework under the identical extreme non-IID condition (Dirichlet alpha = {alpha_val}) where vanilla FedAvg experienced severe representation collapse.",
-            f"",
-            f"FedProx introduces a proximal constraint term into each client's local loss function: L_k(w) + (mu / 2) * ||w - w_global||^2 with mu = {mu_val}, restricting local client parameters from drifting excessively away from the global reference model.",
-            f"",
-            f"### Comprehensive 6-Condition Benchmark Table",
-            f"",
-            f"| Experiment Setup | Test Accuracy | Test Macro Precision | Test Macro Recall | Test Macro F1 | Test Weighted F1 | Best Val F1 | Best Val Acc | Training Time | Total Comm. |",
-            f"|:---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|",
-            f"| **1. Centralized MLP Baseline** | **91.28%** | **0.8986** | **0.8937** | **0.8957** | **0.9124** | 0.9000 | 91.41% | 14.82s | 0.0 MB |",
-            f"| **2. FedAvg IID (Exp 1)** | **90.19%** | **0.8959** | **0.8776** | **0.8853** | **0.9009** | 0.8903 | 90.45% | 39.19s | 595.23 MB |",
-            f"| **3. FedAvg Dirichlet a=1.0 (Exp 2)** | **89.80%** | **0.8867** | **0.8715** | **0.8781** | **0.8971** | 0.8864 | 90.28% | 37.11s | 595.23 MB |",
-            f"| **4. FedAvg Dirichlet a=0.5 (Exp 3)** | **89.93%** | **0.8928** | **0.8804** | **0.8845** | **0.8985** | 0.8667 | 88.54% | 59.27s | 595.23 MB |",
-            f"| **5. FedAvg Dirichlet a=0.1 (Exp 4)** | **69.92%** | **0.5756** | **0.6424** | **0.5836** | **0.6497** | 0.5751 | 69.18% | 64.37s | 595.23 MB |",
-            f"| **6. FedProx Dirichlet a=0.1 (Exp 5)** | **{test['accuracy']*100:.2f}%** | **{test['macro_precision']:.4f}** | **{test['macro_recall']:.4f}** | **{test['macro_f1']:.4f}** | **{test['weighted_f1']:.4f}** | **{val_best['macro_f1']:.4f}** | **{val_best['accuracy']*100:.2f}%** | **{meta['total_train_time_seconds']:.2f}s** | **{comm['total_mb_all_rounds']:.2f} MB** |",
-            f"",
-            f"### Direct Comparison: FedProx vs. FedAvg (Dirichlet a=0.1)",
-            f"",
-            f"| Metric | FedAvg (a=0.1) | FedProx (a=0.1, mu=0.01) | Absolute Delta | Relative Gain / Recovery |",
-            f"|:---|:---:|:---:|:---:|:---:|",
-            f"| **Test Accuracy** | 69.92% | **{test['accuracy']*100:.2f}%** | **{diff_acc_a01:+.2f}%** | **{recovery_acc:.1f}% Recovery of IID Gap** |",
-            f"| **Test Macro F1** | 0.5836 | **{test['macro_f1']:.4f}** | **{diff_f1_a01:+.4f}** | **{recovery_f1:.1f}% Recovery of IID Gap** |",
-            f"| **Test Weighted F1** | 0.6497 | **{test['weighted_f1']:.4f}** | **{diff_wf1_a01:+.4f}** | — |",
-            f"| **Test Macro Precision** | 0.5756 | **{test['macro_precision']:.4f}** | **{diff_prec_a01:+.4f}** | — |",
-            f"| **Test Macro Recall** | 0.6424 | **{test['macro_recall']:.4f}** | **{diff_rec_a01:+.4f}** | — |",
-            f"| **Training Time** | 64.37s | **{meta['total_train_time_seconds']:.2f}s** | **{meta['total_train_time_seconds'] - 64.37:+.2f}s** | Minor compute overhead ({((meta['total_train_time_seconds'] - 64.37)/64.37)*100:+.1f}%) |",
+            f"| Metric | Value |",
+            f"|:---|:---|",
+            f"| **Test Accuracy** | **{test['accuracy']*100:.2f}%** |",
+            f"| **Test Macro F1** | **{test['macro_f1']:.4f}** |",
+            f"| **Test Weighted F1** | **{test['weighted_f1']:.4f}** |",
+            f"| **Test Macro Precision** | **{test['macro_precision']:.4f}** |",
+            f"| **Test Macro Recall** | **{test['macro_recall']:.4f}** |",
+            f"| **Differential Privacy Guarantee** | **ε = {meta.get('final_epsilon', 'N/A')}, δ = {meta.get('target_delta', 'N/A')}** |",
+            f"| **Secure Aggregation** | **{'Enabled (Pairwise Additive Masking)' if secagg_on else 'Disabled'}** |",
+            f"| **Best Validation Round** | **Round {val_best['round']}** (Val F1: {val_best['macro_f1']:.4f}, Val Acc: {val_best['accuracy']*100:.2f}%) |",
+            f"| **Training Time** | **{meta['total_train_time_seconds']:.2f}s** |",
+            f"| **Total Communication** | **{comm['total_mb_all_rounds']:.2f} MB** |",
             f"",
             f"> [!NOTE]",
-            f"> **Privacy Scope Clarification:** Federated learning provides data locality in these experiments; formal privacy guarantees are evaluated separately through Differential Privacy and Secure Aggregation in Phase 6.",
+            f"> **Privacy Definition:** DP bounds the probability ratio of outputs on adjacent datasets by exp(ε). Secure Aggregation provides cryptographic confidentiality by masking individual updates so the server only observes the aggregated sum.",
             f"",
             f"---",
             f"",
-            f"## 2. Experiment Configuration",
+            f"## 2. Configuration",
             f"",
-            f"| Hyperparameter | Value | Description |",
-            f"|:---|:---|:---|",
-            f"| **Algorithm** | FedProx | L_k(w) + (mu / 2) * ||w - w_global||^2 |",
-            f"| **Proximal Coefficient (mu)** | 0.01 | Fixed proximal penalty coefficient |",
-            f"| **Partition Type** | Dirichlet Non-IID | alpha = {alpha_val}, Seed = 42 (Identical to Exp 4) |",
-            f"| **Participating Clients (K)** | 10 | Simulated mobile endpoints |",
-            f"| **Client Fraction (C)** | 1.0 (100%) | All 10 clients participate every round |",
-            f"| **Communication Rounds (T)** | 50 | Global synchronization rounds |",
-            f"| **Local Epochs (E)** | 2 | Local passes per client per round |",
-            f"| **Batch Size (B)** | 64 | Mini-batch SGD |",
-            f"| **Optimizer** | AdamW | lr = 0.001, Weight Decay = 0.0001 |",
-            f"| **Model Architecture** | `MalwareMLP` | 443 -> 256 -> 128 -> 64 -> 5 (156,037 params) |",
-            f"| **Device** | CPU | Windows 11 x86_64 |",
-            f"",
-            f"---",
-            f"",
-            f"## 3. Dirichlet Partition Methodology & Verification",
-            f"",
-            f"The exact deterministic partition from Experiment 4 (alpha = 0.1, seed = 42) was reused to guarantee strict experimental control.",
-            f"",
-            f"### Strict Partition Verification:",
-            f"- **Total Assigned Training Samples:** Exactly 8,062 / 8,062 (0 unassigned, 0 lost).",
-            f"- **Unique Assigned Samples:** Exactly 8,062 (0 duplicate indices).",
-            f"- **Mutual Exclusivity & Exhaustiveness:** 100% verified.",
-            f"- **Split Isolation:** Centralized validation (1,152 samples) and locked test (2,304 samples) never entered any client shard.",
-            f"- **StandardScaler Scope:** Fitted strictly on X_train prior to partitioning.",
+            f"| Parameter | Value |",
+            f"|:---|:---|",
+            f"| **Algorithm** | {meta['algorithm']} |",
+            f"| **DP Enabled** | {dp_on} |",
+            f"| **Noise Multiplier (sigma)** | {meta.get('noise_multiplier', 'N/A')} |",
+            f"| **Clipping Norm (C)** | {meta.get('clip_norm', 'N/A')} |",
+            f"| **Target Delta** | {meta.get('target_delta', 'N/A')} |",
+            f"| **SecAgg Enabled** | {secagg_on} |",
+            f"| **Partition** | {meta['partition_type']} (alpha = {meta.get('dirichlet_alpha', 'N/A')}) |",
+            f"| **Clients (K)** | {meta['num_clients']} |",
+            f"| **Rounds (T)** | {meta['num_rounds']} |",
+            f"| **Local Epochs (E)** | {meta['local_epochs']} |",
+            f"| **Batch Size (B)** | {meta['batch_size']} |",
+            f"| **Learning Rate** | {meta['learning_rate']} |",
+            f"| **Optimizer** | AdamW (wd = {meta['weight_decay']}) |",
             f"",
             f"---",
             f"",
-            f"## 4. Client Data Distribution & Heterogeneity Analysis",
+            f"## 3. Client Data Distribution",
             f"",
             f"| Client ID | Total Samples | Adware (0) | Banking (1) | SMS (2) | Riskware (3) | Benign (4) | Dominant Class (% of Client) | Entropy | TVD to Prior |",
             f"|:---|:---:|:---:|:---:|:---:|:---:|:---:|:---|:---:|:---:|",
             client_table_md,
             f"| **Total Global Train** | **8,062** | **876** | **1,429** | **2,731** | **1,772** | **1,254** | **SMS (33.87%)** | **2.20 b** | **0.000** |",
             f"",
-            f"![Client Class Distribution]({exp_name}_class_distribution.png)",
-            f"",
-            f"### Statistical Heterogeneity Metrics",
-            f"- **Mean Client Shannon Entropy:** **{het['mean_client_entropy_bits']:.4f} bits** (vs theoretical uniform: {het['max_possible_entropy_bits']:.4f} bits).",
-            f"- **Min Client Shannon Entropy:** **{het['min_client_entropy_bits']:.4f} bits** (Client 07: 100% Riskware).",
-            f"- **Mean Total Variation Distance (TVD):** **{het['mean_tvd_from_global_prior']:.4f}** from global prior.",
-            f"- **Max Total Variation Distance (TVD):** **{het['max_tvd_from_global_prior']:.4f}** (Client 02: 98.3% Banking).",
-            f"- **Client Size Range:** **[{het['min_client_size']}..{het['max_client_size']}] samples** (Client 04 holds 42.0% of data).",
-            f"- **Client Size Standard Deviation:** **{het['std_client_size']}**.",
-            f"",
             f"---",
             f"",
-            f"## 5. Round-by-Round Validation Convergence",
+            f"## 4. Round-by-Round Validation History",
             f"",
-            f"*Validation evaluated centrally on 1,152 validation samples after each global round:*",
-            f"",
-            f"| Global Round | Validation Loss | Validation Accuracy | Validation Macro F1 | Validation Weighted F1 | Cumulative Comm. |",
-            f"|:---|:---:|:---:|:---:|:---:|:---:|",
+            f"| Global Round | Validation Loss | Validation Accuracy | Validation Macro F1 | Validation Weighted F1 | Epsilon (ε) | Cumulative Comm. |",
+            f"|:---|:---:|:---:|:---:|:---:|:---:|:---:|",
             progression_md,
             f"",
-            f"![Convergence Curves]({exp_name}_convergence.png)",
-            f"",
             f"---",
             f"",
-            f"## 6. Best Validation Checkpoint",
-            f"",
-            f"- **Optimal Validation Round:** **Round {val_best['round']}**",
-            f"- **Validation Macro F1:** **{val_best['macro_f1']:.4f}**",
-            f"- **Validation Accuracy:** **{val_best['accuracy']*100:.2f}%**",
-            f"- **Validation Weighted F1:** **{val_best['weighted_f1']:.4f}**",
-            f"- **Validation Loss:** **{val_best['loss']:.4f}**",
-            f"",
-            f"---",
-            f"",
-            f"## 7. Locked Test Performance (2,304 Samples)",
-            f"",
-            f"*Evaluated ONCE using the best global model checkpoint (Round {val_best['round']}) strictly after all 50 rounds completed:*",
-            f"",
-            f"- **Test Accuracy:** **{test['accuracy']*100:.2f}%**",
-            f"- **Test Macro Precision:** **{test['macro_precision']:.4f}**",
-            f"- **Test Macro Recall:** **{test['macro_recall']:.4f}**",
-            f"- **Test Macro F1-Score:** **{test['macro_f1']:.4f}**",
-            f"- **Test Weighted F1-Score:** **{test['weighted_f1']:.4f}**",
-            f"",
-            f"---",
-            f"",
-            f"## 8. Per-Class Test Performance",
+            f"## 5. Locked Test Set Performance (2,304 Samples)",
             f"",
             f"| Class Name | Precision | Recall | F1-Score | Support |",
             f"|:---|:---:|:---:|:---:|:---:|",
@@ -616,10 +618,7 @@ class FederatedExperiment:
             f"| **Macro Average** | **{test['macro_precision']:.4f}** | **{test['macro_recall']:.4f}** | **{test['macro_f1']:.4f}** | 2,304 |",
             f"| **Weighted Average** | **{test['macro_precision']:.4f}** | **{test['macro_recall']:.4f}** | **{test['weighted_f1']:.4f}** | 2,304 |",
             f"",
-            f"---",
-            f"",
-            f"## 9. Confusion Matrix (Locked Test Set)",
-            f"",
+            f"### Confusion Matrix",
             f"```",
             f"Pred ->   Adware  Banking     SMS  Riskware   Benign | Total",
             f"Adware       {test['confusion_matrix'][0][0]:4d}     {test['confusion_matrix'][0][1]:4d}    {test['confusion_matrix'][0][2]:4d}       {test['confusion_matrix'][0][3]:4d}     {test['confusion_matrix'][0][4]:4d} |   250",
@@ -627,78 +626,6 @@ class FederatedExperiment:
             f"SMS          {test['confusion_matrix'][2][0]:4d}     {test['confusion_matrix'][2][1]:4d}    {test['confusion_matrix'][2][2]:4d}       {test['confusion_matrix'][2][3]:4d}     {test['confusion_matrix'][2][4]:4d} |   781",
             f"Riskware     {test['confusion_matrix'][3][0]:4d}     {test['confusion_matrix'][3][1]:4d}    {test['confusion_matrix'][3][2]:4d}       {test['confusion_matrix'][3][3]:4d}     {test['confusion_matrix'][3][4]:4d} |   506",
             f"Benign       {test['confusion_matrix'][4][0]:4d}     {test['confusion_matrix'][4][1]:4d}    {test['confusion_matrix'][4][2]:4d}       {test['confusion_matrix'][4][3]:4d}     {test['confusion_matrix'][4][4]:4d} |   358",
-            f"```",
-            f"",
-            f"![Confusion Matrix]({exp_name}_confusion_matrix.png)",
-            f"",
-            f"---",
-            f"",
-            f"## 10. Communication Cost Accounting",
-            f"",
-            f"- **Parameters per Model:** 156,037 (float32, 4 bytes / parameter)",
-            f"- **Model Payload Size:** 624,148 bytes (609.52 KB)",
-            f"- **Downlink per Round (10 clients):** 5.95 MB",
-            f"- **Uplink per Round (10 clients):** 5.95 MB",
-            f"- **Total Communication per Round:** **11.9047 MB**",
-            f"- **Total Bandwidth across 50 Rounds:** **624,148,000 bytes ({comm['total_mb_all_rounds']:.2f} MB / 0.581 GB)**",
-            f"",
-            f"---",
-            f"",
-            f"## 11. Training Time",
-            f"",
-            f"- **Total Wall-Clock Training Time:** **{meta['total_train_time_seconds']:.2f} seconds** ({meta['total_train_time_seconds']/meta['num_rounds']:.2f} s / round).",
-            f"- **Inference Latency:** **{test['latency_ms_per_sample']:.4f} ms / sample** on CPU.",
-            f"",
-            f"---",
-            f"",
-            f"## 12. Research Question Evaluation (RQ1 – RQ5)",
-            f"",
-            f"### RQ1: Does FedProx improve global performance under extreme non-IID compared with vanilla FedAvg?",
-            f"- **Finding:** {'YES' if test['accuracy'] > a01_test_acc/100.0 else 'NO'}. FedProx achieved **{test['accuracy']*100:.2f}%** test accuracy (vs **{a01_test_acc:.2f}%** in FedAvg a=0.1), delivering a **{diff_acc_a01:+.2f}%** improvement.",
-            f"",
-            f"### RQ2: Does FedProx recover the collapsed Benign-class performance?",
-            f"- **Finding:** Benign class F1 changed from **0.0000** in FedAvg a=0.1 to **{test['per_class']['Benign']['f1_score']:.4f}** in FedProx (Recall: **{test['per_class']['Benign']['recall']*100:.1f}%**, Precision: **{test['per_class']['Benign']['precision']*100:.1f}%**). The proximal constraint prevented dominant clients (Client 04) from obliterating minority feature spaces.",
-            f"",
-            f"### RQ3: Does FedProx improve Macro F1 rather than only overall accuracy?",
-            f"- **Finding:** {'YES' if test['macro_f1'] > a01_test_macro_f1 else 'NO'}. Test Macro F1 shifted from **{a01_test_macro_f1:.4f}** to **{test['macro_f1']:.4f}** ({diff_f1_a01:+.4f}), confirming that performance gains are balanced across all five classes rather than biased by majority classes.",
-            f"",
-            f"### RQ4: Does the proximal constraint reduce the effect of severe client drift?",
-            f"- **Finding:** YES. By penalizing parameter deviation (mu / 2) * ||w - w_global||^2, client updates remained bounded within a proximal neighborhood of the global model, suppressing the destabilizing drift of heavily biased nodes.",
-            f"",
-            f"### RQ5: What trade-off occurs in training time?",
-            f"- **Finding:** Training time changed from 64.37s to **{meta['total_train_time_seconds']:.2f}s** ({((meta['total_train_time_seconds'] - 64.37)/64.37)*100:+.1f}%). The computational overhead of computing the proximal Euclidean distance is negligible.",
-            f"",
-            f"---",
-            f"",
-            f"## 13. Reproducibility Information",
-            f"",
-            f"- **Random Seed:** 42",
-            f"- **Python Version:** {meta['system_metadata']['python_version']}",
-            f"- **PyTorch Version:** {meta['system_metadata']['pytorch_version']}",
-            f"- **Platform:** {meta['system_metadata']['platform']}",
-            f"- **Execution Command:** `python -u src/run_federated.py --experiment fedprox_a01_mu001 --alpha 0.1`",
-            f"",
-            f"---",
-            f"",
-            f"## 14. Artifact Locations",
-            f"",
-            f"```",
-            f"models/federated/fedprox_a01_mu001/",
-            f"├── best_model.pt                   # Optimal global checkpoint (Round {val_best['round']})",
-            f"├── final_model.pt                  # Final round state dictionary (Round 50)",
-            f"├── partition.json                  # Client sample allocation map",
-            f"├── config.json                     # Complete hyperparameter configuration",
-            f"├── training_history.json           # Validation trajectory across 50 rounds",
-            f"└── convergence.json                # Convergence trajectory metadata",
-            f"",
-            f"results/federated/",
-            f"└── fedprox_a01_mu001_metrics.json  # Machine-readable experiment results",
-            f"",
-            f"reports/federated/",
-            f"├── fedprox_a01_mu001_report.md     # Full research report",
-            f"├── fedprox_a01_mu001_convergence.png   # Convergence curves",
-            f"├── fedprox_a01_mu001_class_distribution.png  # Non-IID client distributions",
-            f"└── fedprox_a01_mu001_confusion_matrix.png    # Test set confusion matrix",
             f"```",
         ]
 
