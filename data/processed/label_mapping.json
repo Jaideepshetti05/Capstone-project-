@@ -1,0 +1,23 @@
+{
+  "numeric_to_encoded": {
+    "1": 0,
+    "2": 1,
+    "3": 2,
+    "4": 3,
+    "5": 4
+  },
+  "encoded_to_numeric": {
+    "0": 1,
+    "1": 2,
+    "2": 3,
+    "3": 4,
+    "4": 5
+  },
+  "encoded_to_name": {
+    "0": "Adware",
+    "1": "Banking malware",
+    "2": "SMS malware",
+    "3": "Riskware",
+    "4": "Benign"
+  }
+}

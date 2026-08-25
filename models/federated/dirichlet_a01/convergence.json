@@ -1,0 +1,912 @@
+{
+  "best_round": 43,
+  "best_val_macro_f1": 0.5751390037525859,
+  "best_val_accuracy": 0.6918402777777778,
+  "best_val_loss": 1.4872,
+  "best_val_macro_precision": 0.5741341307724845,
+  "best_val_macro_recall": 0.6342899885550999,
+  "best_val_weighted_f1": 0.6387481764569937,
+  "total_train_time_seconds": 64.37,
+  "history": [
+    {
+      "round": 1,
+      "val_loss": 1.3957,
+      "val_accuracy": 0.4210069444444444,
+      "val_macro_f1": 0.21789683697558732,
+      "val_weighted_f1": 0.27684547347467997,
+      "val_macro_precision": 0.2771625308561777,
+      "val_macro_recall": 0.34769837077026894,
+      "per_class_f1": {
+        "Adware": 0.36853002070393376,
+        "Banking malware": 0.028037383177570093,
+        "SMS malware": 0.6701030927835051,
+        "Riskware": 0.022813688212927757,
+        "Benign": 0.0
+      },
+      "round_time_seconds": 2.98,
+      "cumulative_comm_mb": 11.9
+    },
+    {
+      "round": 2,
+      "val_loss": 1.3165,
+      "val_accuracy": 0.4392361111111111,
+      "val_macro_f1": 0.23714697841699314,
+      "val_weighted_f1": 0.2981815951282024,
+      "val_macro_precision": 0.39319423871341697,
+      "val_macro_recall": 0.37762113178444034,
+      "per_class_f1": {
+        "Adware": 0.3925233644859813,
+        "Banking malware": 0.046948356807511735,
+        "SMS malware": 0.7008086253369272,
+        "Riskware": 0.045454545454545456,
+        "Benign": 0.0
+      },
+      "round_time_seconds": 1.56,
+      "cumulative_comm_mb": 23.81
+    },
+    {
+      "round": 3,
+      "val_loss": 1.3024,
+      "val_accuracy": 0.4227430555555556,
+      "val_macro_f1": 0.21811955714958345,
+      "val_weighted_f1": 0.2788590953389539,
+      "val_macro_precision": 0.3836197139977365,
+      "val_macro_recall": 0.35108346669237445,
+      "per_class_f1": {
+        "Adware": 0.35826771653543305,
+        "Banking malware": 0.037914691943127965,
+        "SMS malware": 0.6788511749347258,
+        "Riskware": 0.01556420233463035,
+        "Benign": 0.0
+      },
+      "round_time_seconds": 1.35,
+      "cumulative_comm_mb": 35.71
+    },
+    {
+      "round": 4,
+      "val_loss": 1.3237,
+      "val_accuracy": 0.4296875,
+      "val_macro_f1": 0.2271920917736276,
+      "val_weighted_f1": 0.28482080766006834,
+      "val_macro_precision": 0.3154043104845244,
+      "val_macro_recall": 0.36189430251614774,
+      "per_class_f1": {
+        "Adware": 0.3975409836065574,
+        "Banking malware": 0.019138755980861243,
+        "SMS malware": 0.6753246753246753,
+        "Riskware": 0.04395604395604396,
+        "Benign": 0.0
+      },
+      "round_time_seconds": 1.09,
+      "cumulative_comm_mb": 47.62
+    },
+    {
+      "round": 5,
+      "val_loss": 1.3543,
+      "val_accuracy": 0.453125,
+      "val_macro_f1": 0.275993317295716,
+      "val_weighted_f1": 0.33192907694313534,
+      "val_macro_precision": 0.39732543976998186,
+      "val_macro_recall": 0.3784972524824063,
+      "per_class_f1": {
+        "Adware": 0.4265402843601896,
+        "Banking malware": 0.06451612903225806,
+        "SMS malware": 0.6638297872340425,
+        "Riskware": 0.22508038585209003,
+        "Benign": 0.0
+      },
+      "round_time_seconds": 1.35,
+      "cumulative_comm_mb": 59.52
+    },
+    {
+      "round": 6,
+      "val_loss": 1.3634,
+      "val_accuracy": 0.5121527777777778,
+      "val_macro_f1": 0.3623130551992154,
+      "val_weighted_f1": 0.4162601191471913,
+      "val_macro_precision": 0.4962073122299439,
+      "val_macro_recall": 0.4469167261158778,
+      "per_class_f1": {
+        "Adware": 0.49760765550239233,
+        "Banking malware": 0.21367521367521367,
+        "SMS malware": 0.6945681211041852,
+        "Riskware": 0.4057142857142857,
+        "Benign": 0.0
+      },
+      "round_time_seconds": 1.34,
+      "cumulative_comm_mb": 71.43
+    },
+    {
+      "round": 7,
+      "val_loss": 1.3771,
+      "val_accuracy": 0.5060763888888888,
+      "val_macro_f1": 0.3459615813805197,
+      "val_weighted_f1": 0.40724129993291347,
+      "val_macro_precision": 0.46114353767841915,
+      "val_macro_recall": 0.4344901571387256,
+      "per_class_f1": {
+        "Adware": 0.4611764705882353,
+        "Banking malware": 0.125,
+        "SMS malware": 0.7046070460704607,
+        "Riskware": 0.43902439024390244,
+        "Benign": 0.0
+      },
+      "round_time_seconds": 1.26,
+      "cumulative_comm_mb": 83.33
+    },
+    {
+      "round": 8,
+      "val_loss": 1.4153,
+      "val_accuracy": 0.5321180555555556,
+      "val_macro_f1": 0.3798898936089353,
+      "val_weighted_f1": 0.43538294721319076,
+      "val_macro_precision": 0.5060615523478843,
+      "val_macro_recall": 0.465236749252868,
+      "per_class_f1": {
+        "Adware": 0.5286783042394015,
+        "Banking malware": 0.1511111111111111,
+        "SMS malware": 0.7001795332136446,
+        "Riskware": 0.5194805194805194,
+        "Benign": 0.0
+      },
+      "round_time_seconds": 1.13,
+      "cumulative_comm_mb": 95.24
+    },
+    {
+      "round": 9,
+      "val_loss": 1.4331,
+      "val_accuracy": 0.5486111111111112,
+      "val_macro_f1": 0.3913950271661587,
+      "val_weighted_f1": 0.44930808766642727,
+      "val_macro_precision": 0.5244047759711098,
+      "val_macro_recall": 0.48194458690831965,
+      "per_class_f1": {
+        "Adware": 0.545,
+        "Banking malware": 0.1187214611872146,
+        "SMS malware": 0.7149404216315307,
+        "Riskware": 0.5783132530120482,
+        "Benign": 0.0
+      },
+      "round_time_seconds": 1.11,
+      "cumulative_comm_mb": 107.14
+    },
+    {
+      "round": 10,
+      "val_loss": 1.4288,
+      "val_accuracy": 0.5824652777777778,
+      "val_macro_f1": 0.44591381796263996,
+      "val_weighted_f1": 0.5002712551593388,
+      "val_macro_precision": 0.5396611453371,
+      "val_macro_recall": 0.5137938879784054,
+      "per_class_f1": {
+        "Adware": 0.5706521739130435,
+        "Banking malware": 0.2962962962962963,
+        "SMS malware": 0.7262569832402235,
+        "Riskware": 0.6363636363636364,
+        "Benign": 0.0
+      },
+      "round_time_seconds": 1.13,
+      "cumulative_comm_mb": 119.05
+    },
+    {
+      "round": 11,
+      "val_loss": 1.4363,
+      "val_accuracy": 0.6024305555555556,
+      "val_macro_f1": 0.4674889929558688,
+      "val_weighted_f1": 0.5279243651808201,
+      "val_macro_precision": 0.539615256669689,
+      "val_macro_recall": 0.5330171792152705,
+      "per_class_f1": {
+        "Adware": 0.5416666666666666,
+        "Banking malware": 0.3607843137254902,
+        "SMS malware": 0.755082284607938,
+        "Riskware": 0.6799116997792495,
+        "Benign": 0.0
+      },
+      "round_time_seconds": 1.13,
+      "cumulative_comm_mb": 130.95
+    },
+    {
+      "round": 12,
+      "val_loss": 1.4912,
+      "val_accuracy": 0.5954861111111112,
+      "val_macro_f1": 0.45983784670336725,
+      "val_weighted_f1": 0.5181535614326259,
+      "val_macro_precision": 0.5390120814523975,
+      "val_macro_recall": 0.5291906295189435,
+      "per_class_f1": {
+        "Adware": 0.5552699228791774,
+        "Banking malware": 0.3346613545816733,
+        "SMS malware": 0.7471264367816092,
+        "Riskware": 0.6621315192743764,
+        "Benign": 0.0
+      },
+      "round_time_seconds": 1.5,
+      "cumulative_comm_mb": 142.86
+    },
+    {
+      "round": 13,
+      "val_loss": 1.4783,
+      "val_accuracy": 0.5989583333333334,
+      "val_macro_f1": 0.46374358259094184,
+      "val_weighted_f1": 0.5215314336067417,
+      "val_macro_precision": 0.5440962156827659,
+      "val_macro_recall": 0.5291147401908802,
+      "per_class_f1": {
+        "Adware": 0.5576407506702413,
+        "Banking malware": 0.336,
+        "SMS malware": 0.7421503330161751,
+        "Riskware": 0.6829268292682927,
+        "Benign": 0.0
+      },
+      "round_time_seconds": 1.17,
+      "cumulative_comm_mb": 154.76
+    },
+    {
+      "round": 14,
+      "val_loss": 1.4925,
+      "val_accuracy": 0.6189236111111112,
+      "val_macro_f1": 0.4906390189687476,
+      "val_weighted_f1": 0.5489882045449366,
+      "val_macro_precision": 0.5496076016097489,
+      "val_macro_recall": 0.552871647546515,
+      "per_class_f1": {
+        "Adware": 0.5631578947368421,
+        "Banking malware": 0.4419475655430712,
+        "SMS malware": 0.7669616519174042,
+        "Riskware": 0.6811279826464208,
+        "Benign": 0.0
+      },
+      "round_time_seconds": 1.11,
+      "cumulative_comm_mb": 166.67
+    },
+    {
+      "round": 15,
+      "val_loss": 1.5566,
+      "val_accuracy": 0.6015625,
+      "val_macro_f1": 0.46957248664489376,
+      "val_weighted_f1": 0.5298664573890968,
+      "val_macro_precision": 0.5368034721851516,
+      "val_macro_recall": 0.5250572833317266,
+      "per_class_f1": {
+        "Adware": 0.5236768802228412,
+        "Banking malware": 0.3923076923076923,
+        "SMS malware": 0.7464114832535885,
+        "Riskware": 0.6854663774403471,
+        "Benign": 0.0
+      },
+      "round_time_seconds": 1.09,
+      "cumulative_comm_mb": 178.57
+    },
+    {
+      "round": 16,
+      "val_loss": 1.5225,
+      "val_accuracy": 0.5885416666666666,
+      "val_macro_f1": 0.44578033591398486,
+      "val_weighted_f1": 0.5043708180379203,
+      "val_macro_precision": 0.5260565179894613,
+      "val_macro_recall": 0.515973546707799,
+      "per_class_f1": {
+        "Adware": 0.555858310626703,
+        "Banking malware": 0.2572614107883817,
+        "SMS malware": 0.7344632768361582,
+        "Riskware": 0.6813186813186813,
+        "Benign": 0.0
+      },
+      "round_time_seconds": 1.11,
+      "cumulative_comm_mb": 190.47
+    },
+    {
+      "round": 17,
+      "val_loss": 1.5007,
+      "val_accuracy": 0.6206597222222222,
+      "val_macro_f1": 0.49346676801390077,
+      "val_weighted_f1": 0.5555227187405639,
+      "val_macro_precision": 0.5471752991152349,
+      "val_macro_recall": 0.5541293743372216,
+      "per_class_f1": {
+        "Adware": 0.5329949238578681,
+        "Banking malware": 0.48175182481751827,
+        "SMS malware": 0.781563126252505,
+        "Riskware": 0.6710239651416122,
+        "Benign": 0.0
+      },
+      "round_time_seconds": 1.13,
+      "cumulative_comm_mb": 202.38
+    },
+    {
+      "round": 18,
+      "val_loss": 1.5878,
+      "val_accuracy": 0.6362847222222222,
+      "val_macro_f1": 0.5108302912393172,
+      "val_weighted_f1": 0.5724410053015604,
+      "val_macro_precision": 0.5562698484234623,
+      "val_macro_recall": 0.5709030752916225,
+      "per_class_f1": {
+        "Adware": 0.5487179487179488,
+        "Banking malware": 0.5071428571428571,
+        "SMS malware": 0.7870837537840565,
+        "Riskware": 0.7112068965517241,
+        "Benign": 0.0
+      },
+      "round_time_seconds": 1.18,
+      "cumulative_comm_mb": 214.28
+    },
+    {
+      "round": 19,
+      "val_loss": 1.5638,
+      "val_accuracy": 0.6302083333333334,
+      "val_macro_f1": 0.5018538839528572,
+      "val_weighted_f1": 0.5618289825530025,
+      "val_macro_precision": 0.5482846648575336,
+      "val_macro_recall": 0.565970472652127,
+      "per_class_f1": {
+        "Adware": 0.5677083333333334,
+        "Banking malware": 0.46886446886446886,
+        "SMS malware": 0.7850655903128153,
+        "Riskware": 0.6876310272536688,
+        "Benign": 0.0
+      },
+      "round_time_seconds": 1.12,
+      "cumulative_comm_mb": 226.19
+    },
+    {
+      "round": 20,
+      "val_loss": 1.5649,
+      "val_accuracy": 0.6267361111111112,
+      "val_macro_f1": 0.4994158606771418,
+      "val_weighted_f1": 0.5599539751490809,
+      "val_macro_precision": 0.5496128066459546,
+      "val_macro_recall": 0.5610968475850766,
+      "per_class_f1": {
+        "Adware": 0.5529715762273901,
+        "Banking malware": 0.4744525547445255,
+        "SMS malware": 0.78,
+        "Riskware": 0.6896551724137931,
+        "Benign": 0.0
+      },
+      "round_time_seconds": 1.19,
+      "cumulative_comm_mb": 238.09
+    },
+    {
+      "round": 21,
+      "val_loss": 1.4833,
+      "val_accuracy": 0.6414930555555556,
+      "val_macro_f1": 0.5159447046462653,
+      "val_weighted_f1": 0.5772714850283271,
+      "val_macro_precision": 0.5425102549267435,
+      "val_macro_recall": 0.5741668720816123,
+      "per_class_f1": {
+        "Adware": 0.555256064690027,
+        "Banking malware": 0.5069444444444444,
+        "SMS malware": 0.7865168539325843,
+        "Riskware": 0.731006160164271,
+        "Benign": 0.0
+      },
+      "round_time_seconds": 1.21,
+      "cumulative_comm_mb": 250.0
+    },
+    {
+      "round": 22,
+      "val_loss": 1.5341,
+      "val_accuracy": 0.6302083333333334,
+      "val_macro_f1": 0.5039920159680639,
+      "val_weighted_f1": 0.5624503101931059,
+      "val_macro_precision": 0.540689462385382,
+      "val_macro_recall": 0.5546610623734696,
+      "per_class_f1": {
+        "Adware": 0.5595238095238095,
+        "Banking malware": 0.5,
+        "SMS malware": 0.7738095238095238,
+        "Riskware": 0.6866267465069861,
+        "Benign": 0.0
+      },
+      "round_time_seconds": 1.34,
+      "cumulative_comm_mb": 261.9
+    },
+    {
+      "round": 23,
+      "val_loss": 1.6213,
+      "val_accuracy": 0.6137152777777778,
+      "val_macro_f1": 0.4875348733742698,
+      "val_weighted_f1": 0.5451647778387181,
+      "val_macro_precision": 0.540984382253461,
+      "val_macro_recall": 0.5296263761689001,
+      "per_class_f1": {
+        "Adware": 0.5303514376996805,
+        "Banking malware": 0.47058823529411764,
+        "SMS malware": 0.7428571428571429,
+        "Riskware": 0.6938775510204082,
+        "Benign": 0.0
+      },
+      "round_time_seconds": 1.24,
+      "cumulative_comm_mb": 273.81
+    },
+    {
+      "round": 24,
+      "val_loss": 1.4957,
+      "val_accuracy": 0.6380208333333334,
+      "val_macro_f1": 0.5177569513297724,
+      "val_weighted_f1": 0.5699267855056525,
+      "val_macro_precision": 0.5549110036138967,
+      "val_macro_recall": 0.5635106526559337,
+      "per_class_f1": {
+        "Adware": 0.6089743589743589,
+        "Banking malware": 0.5319148936170213,
+        "SMS malware": 0.7669616519174042,
+        "Riskware": 0.6809338521400778,
+        "Benign": 0.0
+      },
+      "round_time_seconds": 1.22,
+      "cumulative_comm_mb": 285.71
+    },
+    {
+      "round": 25,
+      "val_loss": 1.511,
+      "val_accuracy": 0.6449652777777778,
+      "val_macro_f1": 0.5284549126247513,
+      "val_weighted_f1": 0.5841219120408598,
+      "val_macro_precision": 0.5532900330203959,
+      "val_macro_recall": 0.5717327123918853,
+      "per_class_f1": {
+        "Adware": 0.5619335347432024,
+        "Banking malware": 0.6046511627906976,
+        "SMS malware": 0.7690782953419227,
+        "Riskware": 0.7066115702479339,
+        "Benign": 0.0
+      },
+      "round_time_seconds": 1.16,
+      "cumulative_comm_mb": 297.62
+    },
+    {
+      "round": 26,
+      "val_loss": 1.6181,
+      "val_accuracy": 0.6302083333333334,
+      "val_macro_f1": 0.5032068096429485,
+      "val_weighted_f1": 0.5645005893306377,
+      "val_macro_precision": 0.5406128831692503,
+      "val_macro_recall": 0.5563726321045516,
+      "per_class_f1": {
+        "Adware": 0.5378151260504201,
+        "Banking malware": 0.49110320284697506,
+        "SMS malware": 0.7749003984063745,
+        "Riskware": 0.7122153209109731,
+        "Benign": 0.0
+      },
+      "round_time_seconds": 1.26,
+      "cumulative_comm_mb": 309.52
+    },
+    {
+      "round": 27,
+      "val_loss": 1.5574,
+      "val_accuracy": 0.6414930555555556,
+      "val_macro_f1": 0.5192981096956097,
+      "val_weighted_f1": 0.5804590792451078,
+      "val_macro_precision": 0.5637206571792588,
+      "val_macro_recall": 0.5752303588952582,
+      "per_class_f1": {
+        "Adware": 0.5440414507772021,
+        "Banking malware": 0.5333333333333333,
+        "SMS malware": 0.7811244979919679,
+        "Riskware": 0.7379912663755459,
+        "Benign": 0.0
+      },
+      "round_time_seconds": 1.23,
+      "cumulative_comm_mb": 321.43
+    },
+    {
+      "round": 28,
+      "val_loss": 1.5426,
+      "val_accuracy": 0.6614583333333334,
+      "val_macro_f1": 0.536523419102462,
+      "val_weighted_f1": 0.6004423292831711,
+      "val_macro_precision": 0.5625512560378461,
+      "val_macro_recall": 0.5972288055528777,
+      "per_class_f1": {
+        "Adware": 0.5595854922279793,
+        "Banking malware": 0.5802047781569966,
+        "SMS malware": 0.8210526315789474,
+        "Riskware": 0.7217741935483871,
+        "Benign": 0.0
+      },
+      "round_time_seconds": 1.15,
+      "cumulative_comm_mb": 333.33
+    },
+    {
+      "round": 29,
+      "val_loss": 1.4876,
+      "val_accuracy": 0.6510416666666666,
+      "val_macro_f1": 0.5323313811262175,
+      "val_weighted_f1": 0.5925034513674513,
+      "val_macro_precision": 0.5562588863483404,
+      "val_macro_recall": 0.5881599201081704,
+      "per_class_f1": {
+        "Adware": 0.5549738219895288,
+        "Banking malware": 0.5960264900662252,
+        "SMS malware": 0.7942386831275721,
+        "Riskware": 0.7164179104477612,
+        "Benign": 0.0
+      },
+      "round_time_seconds": 1.18,
+      "cumulative_comm_mb": 345.24
+    },
+    {
+      "round": 30,
+      "val_loss": 1.523,
+      "val_accuracy": 0.6553819444444444,
+      "val_macro_f1": 0.5357394576736239,
+      "val_weighted_f1": 0.5989221099153453,
+      "val_macro_precision": 0.5609099042972818,
+      "val_macro_recall": 0.5906550190707137,
+      "per_class_f1": {
+        "Adware": 0.5370843989769821,
+        "Banking malware": 0.5947712418300654,
+        "SMS malware": 0.7995889003083247,
+        "Riskware": 0.7472527472527473,
+        "Benign": 0.0
+      },
+      "round_time_seconds": 1.56,
+      "cumulative_comm_mb": 357.14
+    },
+    {
+      "round": 31,
+      "val_loss": 1.5445,
+      "val_accuracy": 0.6432291666666666,
+      "val_macro_f1": 0.5270745119880127,
+      "val_weighted_f1": 0.5871369777065354,
+      "val_macro_precision": 0.5578883327893229,
+      "val_macro_recall": 0.5783390449070195,
+      "per_class_f1": {
+        "Adware": 0.535064935064935,
+        "Banking malware": 0.6019417475728155,
+        "SMS malware": 0.7811244979919679,
+        "Riskware": 0.7172413793103448,
+        "Benign": 0.0
+      },
+      "round_time_seconds": 1.22,
+      "cumulative_comm_mb": 369.05
+    },
+    {
+      "round": 32,
+      "val_loss": 1.5096,
+      "val_accuracy": 0.6736111111111112,
+      "val_macro_f1": 0.5574560297762603,
+      "val_weighted_f1": 0.618617484246005,
+      "val_macro_precision": 0.5677497152810342,
+      "val_macro_recall": 0.6108652295036177,
+      "per_class_f1": {
+        "Adware": 0.5555555555555556,
+        "Banking malware": 0.6749226006191951,
+        "SMS malware": 0.8100208768267223,
+        "Riskware": 0.7467811158798283,
+        "Benign": 0.0
+      },
+      "round_time_seconds": 1.19,
+      "cumulative_comm_mb": 380.95
+    },
+    {
+      "round": 33,
+      "val_loss": 1.5699,
+      "val_accuracy": 0.6553819444444444,
+      "val_macro_f1": 0.5361136968051892,
+      "val_weighted_f1": 0.5961931959574542,
+      "val_macro_precision": 0.5553874014335598,
+      "val_macro_recall": 0.5903774246255689,
+      "per_class_f1": {
+        "Adware": 0.5614973262032086,
+        "Banking malware": 0.5714285714285714,
+        "SMS malware": 0.7878172588832487,
+        "Riskware": 0.759825327510917,
+        "Benign": 0.0
+      },
+      "round_time_seconds": 1.41,
+      "cumulative_comm_mb": 392.85
+    },
+    {
+      "round": 34,
+      "val_loss": 1.5529,
+      "val_accuracy": 0.6449652777777778,
+      "val_macro_f1": 0.5272202374537897,
+      "val_weighted_f1": 0.5841503448222919,
+      "val_macro_precision": 0.5401066281623371,
+      "val_macro_recall": 0.5618336836016582,
+      "per_class_f1": {
+        "Adware": 0.5418060200668896,
+        "Banking malware": 0.5830721003134797,
+        "SMS malware": 0.7543520309477756,
+        "Riskware": 0.7568710359408034,
+        "Benign": 0.0
+      },
+      "round_time_seconds": 1.15,
+      "cumulative_comm_mb": 404.76
+    },
+    {
+      "round": 35,
+      "val_loss": 1.5323,
+      "val_accuracy": 0.6510416666666666,
+      "val_macro_f1": 0.5358386402162459,
+      "val_weighted_f1": 0.5916771669370408,
+      "val_macro_precision": 0.5683413163819608,
+      "val_macro_recall": 0.5776130061525608,
+      "per_class_f1": {
+        "Adware": 0.5595238095238095,
+        "Banking malware": 0.6020066889632107,
+        "SMS malware": 0.761252446183953,
+        "Riskware": 0.7564102564102564,
+        "Benign": 0.0
+      },
+      "round_time_seconds": 1.15,
+      "cumulative_comm_mb": 416.66
+    },
+    {
+      "round": 36,
+      "val_loss": 1.5022,
+      "val_accuracy": 0.6822916666666666,
+      "val_macro_f1": 0.5655525413796835,
+      "val_weighted_f1": 0.6268353165072253,
+      "val_macro_precision": 0.5596144936528356,
+      "val_macro_recall": 0.6165973911560337,
+      "per_class_f1": {
+        "Adware": 0.5561797752808989,
+        "Banking malware": 0.7176470588235294,
+        "SMS malware": 0.8199152542372882,
+        "Riskware": 0.734020618556701,
+        "Benign": 0.0
+      },
+      "round_time_seconds": 1.02,
+      "cumulative_comm_mb": 428.57
+    },
+    {
+      "round": 37,
+      "val_loss": 1.5138,
+      "val_accuracy": 0.6614583333333334,
+      "val_macro_f1": 0.5404547609253492,
+      "val_weighted_f1": 0.6024744335865659,
+      "val_macro_precision": 0.5647692147772052,
+      "val_macro_recall": 0.5942920491314977,
+      "per_class_f1": {
+        "Adware": 0.5508021390374331,
+        "Banking malware": 0.5866666666666667,
+        "SMS malware": 0.7958974358974359,
+        "Riskware": 0.7689075630252101,
+        "Benign": 0.0
+      },
+      "round_time_seconds": 1.13,
+      "cumulative_comm_mb": 440.47
+    },
+    {
+      "round": 38,
+      "val_loss": 1.4641,
+      "val_accuracy": 0.6814236111111112,
+      "val_macro_f1": 0.5655987842804626,
+      "val_weighted_f1": 0.6246354831706085,
+      "val_macro_precision": 0.5624261967581743,
+      "val_macro_recall": 0.615251688431752,
+      "per_class_f1": {
+        "Adware": 0.5706051873198847,
+        "Banking malware": 0.6966966966966966,
+        "SMS malware": 0.8071278825995807,
+        "Riskware": 0.7535641547861507,
+        "Benign": 0.0
+      },
+      "round_time_seconds": 1.15,
+      "cumulative_comm_mb": 452.38
+    },
+    {
+      "round": 39,
+      "val_loss": 1.5159,
+      "val_accuracy": 0.6666666666666666,
+      "val_macro_f1": 0.5524183857725179,
+      "val_weighted_f1": 0.6140332092781082,
+      "val_macro_precision": 0.5686201300371563,
+      "val_macro_recall": 0.6041018245098838,
+      "per_class_f1": {
+        "Adware": 0.537467700258398,
+        "Banking malware": 0.6788990825688074,
+        "SMS malware": 0.8024819027921406,
+        "Riskware": 0.7432432432432432,
+        "Benign": 0.0
+      },
+      "round_time_seconds": 1.11,
+      "cumulative_comm_mb": 464.28
+    },
+    {
+      "round": 40,
+      "val_loss": 1.554,
+      "val_accuracy": 0.6510416666666666,
+      "val_macro_f1": 0.5390896923978793,
+      "val_weighted_f1": 0.5901524634963596,
+      "val_macro_precision": 0.58285676434964,
+      "val_macro_recall": 0.587927735467078,
+      "per_class_f1": {
+        "Adware": 0.6067415730337079,
+        "Banking malware": 0.5870307167235495,
+        "SMS malware": 0.7572815533980582,
+        "Riskware": 0.7443946188340808,
+        "Benign": 0.0
+      },
+      "round_time_seconds": 1.09,
+      "cumulative_comm_mb": 476.19
+    },
+    {
+      "round": 41,
+      "val_loss": 1.5188,
+      "val_accuracy": 0.6779513888888888,
+      "val_macro_f1": 0.5651463447715118,
+      "val_weighted_f1": 0.6232759513057308,
+      "val_macro_precision": 0.574927841948556,
+      "val_macro_recall": 0.6156743735585729,
+      "per_class_f1": {
+        "Adware": 0.5683060109289617,
+        "Banking malware": 0.691358024691358,
+        "SMS malware": 0.7958549222797927,
+        "Riskware": 0.7702127659574468,
+        "Benign": 0.0
+      },
+      "round_time_seconds": 1.08,
+      "cumulative_comm_mb": 488.09
+    },
+    {
+      "round": 42,
+      "val_loss": 1.4989,
+      "val_accuracy": 0.6666666666666666,
+      "val_macro_f1": 0.553488678754398,
+      "val_weighted_f1": 0.6136682581159768,
+      "val_macro_precision": 0.5534623395064147,
+      "val_macro_recall": 0.6063704597982434,
+      "per_class_f1": {
+        "Adware": 0.5454545454545454,
+        "Banking malware": 0.6826347305389222,
+        "SMS malware": 0.7983014861995754,
+        "Riskware": 0.7410526315789474,
+        "Benign": 0.0
+      },
+      "round_time_seconds": 1.39,
+      "cumulative_comm_mb": 500.0
+    },
+    {
+      "round": 43,
+      "val_loss": 1.4872,
+      "val_accuracy": 0.6918402777777778,
+      "val_macro_f1": 0.5751390037525859,
+      "val_weighted_f1": 0.6387481764569937,
+      "val_macro_precision": 0.5741341307724845,
+      "val_macro_recall": 0.6342899885550999,
+      "per_class_f1": {
+        "Adware": 0.5626598465473146,
+        "Banking malware": 0.7245508982035929,
+        "SMS malware": 0.8400435255712732,
+        "Riskware": 0.7484407484407485,
+        "Benign": 0.0
+      },
+      "round_time_seconds": 1.18,
+      "cumulative_comm_mb": 511.9
+    },
+    {
+      "round": 44,
+      "val_loss": 1.4866,
+      "val_accuracy": 0.6805555555555556,
+      "val_macro_f1": 0.5700298954717595,
+      "val_weighted_f1": 0.6255965429997108,
+      "val_macro_precision": 0.5760978489497844,
+      "val_macro_recall": 0.6195955871629255,
+      "per_class_f1": {
+        "Adware": 0.5833333333333334,
+        "Banking malware": 0.7197640117994101,
+        "SMS malware": 0.7942681678607983,
+        "Riskware": 0.7527839643652561,
+        "Benign": 0.0
+      },
+      "round_time_seconds": 1.21,
+      "cumulative_comm_mb": 523.81
+    },
+    {
+      "round": 45,
+      "val_loss": 1.5331,
+      "val_accuracy": 0.6796875,
+      "val_macro_f1": 0.5639029762396897,
+      "val_weighted_f1": 0.6251763788994421,
+      "val_macro_precision": 0.5748978812398347,
+      "val_macro_recall": 0.6155203365739951,
+      "per_class_f1": {
+        "Adware": 0.553763440860215,
+        "Banking malware": 0.6875,
+        "SMS malware": 0.8083769633507853,
+        "Riskware": 0.7698744769874477,
+        "Benign": 0.0
+      },
+      "round_time_seconds": 1.22,
+      "cumulative_comm_mb": 535.71
+    },
+    {
+      "round": 46,
+      "val_loss": 1.5854,
+      "val_accuracy": 0.6640625,
+      "val_macro_f1": 0.5473881013250012,
+      "val_weighted_f1": 0.6113461533690054,
+      "val_macro_precision": 0.5717106776603345,
+      "val_macro_recall": 0.6003422119061568,
+      "per_class_f1": {
+        "Adware": 0.5265822784810127,
+        "Banking malware": 0.6387096774193548,
+        "SMS malware": 0.8020833333333334,
+        "Riskware": 0.7695652173913043,
+        "Benign": 0.0
+      },
+      "round_time_seconds": 1.33,
+      "cumulative_comm_mb": 547.62
+    },
+    {
+      "round": 47,
+      "val_loss": 1.5649,
+      "val_accuracy": 0.6840277777777778,
+      "val_macro_f1": 0.5672733973001713,
+      "val_weighted_f1": 0.6263739292472464,
+      "val_macro_precision": 0.5626690742867718,
+      "val_macro_recall": 0.6193347996648104,
+      "per_class_f1": {
+        "Adware": 0.5821325648414986,
+        "Banking malware": 0.6990881458966566,
+        "SMS malware": 0.8178913738019169,
+        "Riskware": 0.7372549019607844,
+        "Benign": 0.0
+      },
+      "round_time_seconds": 1.34,
+      "cumulative_comm_mb": 559.52
+    },
+    {
+      "round": 48,
+      "val_loss": 1.5595,
+      "val_accuracy": 0.6848958333333334,
+      "val_macro_f1": 0.5707728722429228,
+      "val_weighted_f1": 0.6306822765859726,
+      "val_macro_precision": 0.5689135714379969,
+      "val_macro_recall": 0.6241035429752291,
+      "per_class_f1": {
+        "Adware": 0.5675675675675675,
+        "Banking malware": 0.7093023255813954,
+        "SMS malware": 0.8117770767613038,
+        "Riskware": 0.7652173913043478,
+        "Benign": 0.0
+      },
+      "round_time_seconds": 1.43,
+      "cumulative_comm_mb": 571.42
+    },
+    {
+      "round": 49,
+      "val_loss": 1.7421,
+      "val_accuracy": 0.6875,
+      "val_macro_f1": 0.5720837963193973,
+      "val_weighted_f1": 0.6454700521434958,
+      "val_macro_precision": 0.5904506626488475,
+      "val_macro_recall": 0.637530395232198,
+      "per_class_f1": {
+        "Adware": 0.5107296137339056,
+        "Banking malware": 0.7051671732522796,
+        "SMS malware": 0.8694665153234961,
+        "Riskware": 0.7750556792873051,
+        "Benign": 0.0
+      },
+      "round_time_seconds": 1.28,
+      "cumulative_comm_mb": 583.33
+    },
+    {
+      "round": 50,
+      "val_loss": 1.6219,
+      "val_accuracy": 0.6901041666666666,
+      "val_macro_f1": 0.5739761163845765,
+      "val_weighted_f1": 0.6401715107989028,
+      "val_macro_precision": 0.5764029284016536,
+      "val_macro_recall": 0.6356002086284165,
+      "per_class_f1": {
+        "Adware": 0.5458937198067633,
+        "Banking malware": 0.7218934911242604,
+        "SMS malware": 0.8461538461538461,
+        "Riskware": 0.755939524838013,
+        "Benign": 0.0
+      },
+      "round_time_seconds": 1.45,
+      "cumulative_comm_mb": 595.23
+    }
+  ]
+}

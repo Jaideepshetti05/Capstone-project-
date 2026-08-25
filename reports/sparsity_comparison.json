@@ -1,0 +1,224 @@
+{
+  "pipeline_metadata": {
+    "dataset_name": "CICMalDroid 2020 (Dynamic Syscalls & Binders)",
+    "raw_samples": 11598,
+    "raw_features": 470,
+    "cleaned_samples": 11518,
+    "samples_removed_total": 80,
+    "zero_feature_rows_dropped": 35,
+    "conflict_pair_rows_dropped": 4,
+    "exact_duplicate_rows_dropped": 41,
+    "correlation_features_dropped": 27,
+    "variant_a_feature_count": 443,
+    "variant_b_feature_count": 221,
+    "sparse_features_dropped_in_b": 222,
+    "split_ratios": {
+      "train": 0.7,
+      "val": 0.1,
+      "test": 0.2
+    },
+    "split_counts": {
+      "train": 8062,
+      "val": 1152,
+      "test": 2304
+    },
+    "split_class_distribution": {
+      "train": {
+        "Class 1 (Adware)": 876,
+        "Class 2 (Banking malware)": 1429,
+        "Class 3 (SMS malware)": 2731,
+        "Class 4 (Riskware)": 1772,
+        "Class 5 (Benign)": 1254
+      },
+      "val": {
+        "Class 1 (Adware)": 125,
+        "Class 2 (Banking malware)": 205,
+        "Class 3 (SMS malware)": 390,
+        "Class 4 (Riskware)": 253,
+        "Class 5 (Benign)": 179
+      },
+      "test": {
+        "Class 1 (Adware)": 250,
+        "Class 2 (Banking malware)": 409,
+        "Class 3 (SMS malware)": 781,
+        "Class 4 (Riskware)": 506,
+        "Class 5 (Benign)": 358
+      }
+    },
+    "random_seed": 42,
+    "baseline_model": "LogisticRegression(random_state=42, max_iter=2000)",
+    "evaluation_set": "Validation set ONLY (Test set untouched)"
+  },
+  "variant_a_results": {
+    "feature_count": 443,
+    "accuracy": 0.8637152777777778,
+    "macro_f1": 0.8450104719092038,
+    "weighted_f1": 0.8623746125689982,
+    "macro_precision": 0.8552295500970375,
+    "macro_recall": 0.8381930174108947,
+    "per_class_metrics": {
+      "Adware": {
+        "precision": 0.7874015748031497,
+        "recall": 0.8,
+        "f1_score": 0.7936507936507936,
+        "support": 125
+      },
+      "Banking malware": {
+        "precision": 0.7961165048543689,
+        "recall": 0.8,
+        "f1_score": 0.7980535279805353,
+        "support": 205
+      },
+      "SMS malware": {
+        "precision": 0.8842592592592593,
+        "recall": 0.9794871794871794,
+        "f1_score": 0.9294403892944039,
+        "support": 390
+      },
+      "Riskware": {
+        "precision": 0.8922413793103449,
+        "recall": 0.8181818181818182,
+        "f1_score": 0.8536082474226804,
+        "support": 253
+      },
+      "Benign": {
+        "precision": 0.9161290322580645,
+        "recall": 0.7932960893854749,
+        "f1_score": 0.8502994011976048,
+        "support": 179
+      }
+    },
+    "confusion_matrix": [
+      [
+        100,
+        12,
+        7,
+        5,
+        1
+      ],
+      [
+        6,
+        164,
+        17,
+        9,
+        9
+      ],
+      [
+        1,
+        6,
+        382,
+        1,
+        0
+      ],
+      [
+        12,
+        19,
+        12,
+        207,
+        3
+      ],
+      [
+        8,
+        5,
+        14,
+        10,
+        142
+      ]
+    ]
+  },
+  "variant_b_results": {
+    "feature_count": 221,
+    "accuracy": 0.8559027777777778,
+    "macro_f1": 0.8389827302083563,
+    "weighted_f1": 0.854601189836323,
+    "macro_precision": 0.8476152357392401,
+    "macro_recall": 0.8333453492783909,
+    "per_class_metrics": {
+      "Adware": {
+        "precision": 0.8095238095238095,
+        "recall": 0.816,
+        "f1_score": 0.8127490039840638,
+        "support": 125
+      },
+      "Banking malware": {
+        "precision": 0.7688679245283019,
+        "recall": 0.7951219512195122,
+        "f1_score": 0.7817745803357314,
+        "support": 205
+      },
+      "SMS malware": {
+        "precision": 0.8875878220140515,
+        "recall": 0.9717948717948718,
+        "f1_score": 0.9277845777233782,
+        "support": 390
+      },
+      "Riskware": {
+        "precision": 0.8733624454148472,
+        "recall": 0.7905138339920948,
+        "f1_score": 0.8298755186721992,
+        "support": 253
+      },
+      "Benign": {
+        "precision": 0.8987341772151899,
+        "recall": 0.7932960893854749,
+        "f1_score": 0.8427299703264095,
+        "support": 179
+      }
+    },
+    "confusion_matrix": [
+      [
+        102,
+        12,
+        5,
+        6,
+        0
+      ],
+      [
+        7,
+        163,
+        18,
+        10,
+        7
+      ],
+      [
+        0,
+        8,
+        379,
+        3,
+        0
+      ],
+      [
+        10,
+        22,
+        12,
+        200,
+        9
+      ],
+      [
+        7,
+        7,
+        13,
+        10,
+        142
+      ]
+    ]
+  },
+  "comparison_delta_A_minus_B": {
+    "accuracy_delta": 0.0078125,
+    "macro_f1_delta": 0.006027741700847411,
+    "weighted_f1_delta": 0.007773422732675117,
+    "macro_precision_delta": 0.007614314357797358,
+    "macro_recall_delta": 0.004847668132503813,
+    "per_class_f1_delta": {
+      "Adware": -0.019098210333270194,
+      "Banking malware": 0.016278947644803865,
+      "SMS malware": 0.0016558115710256782,
+      "Riskware": 0.023732728750481158,
+      "Benign": 0.007569430871195326
+    }
+  },
+  "recommendation": {
+    "selected_variant": "Variant A (443 features)",
+    "justification": "Variant A achieves superior validation performance across all key metrics (Macro F1: 0.8450 vs 0.8390, Accuracy: 86.37% vs 85.59%). The high-sparsity features include crucial class-discriminative signals for Banking malware (F1: 0.7981 vs 0.7818) and Riskware (F1: 0.8536 vs 0.8299). Removing sparse features causes measurable information loss. Therefore, Variant A (443 features) is recommended as the official dataset for the centralized and federated modeling phase."
+  }
+}

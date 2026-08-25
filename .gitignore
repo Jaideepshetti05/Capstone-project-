@@ -1,0 +1,26 @@
+# Raw CSV datasets in repository root (exceed GitHub 100MB limit, preserved locally)
+/*.csv
+
+# Python bytecode and caches
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Environment and IDE
+.env
+.venv/
+env/
+venv/
+ENV/
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS specific
+.DS_Store
+Thumbs.db
