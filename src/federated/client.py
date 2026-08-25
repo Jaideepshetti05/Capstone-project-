@@ -1,6 +1,9 @@
 """
 Federated Client module for local training on partitioned decentralized data shards.
-Supports both FedAvg (vanilla local SGD/AdamW) and FedProx (proximal term regularization).
+Supports:
+  1. Vanilla FedAvg local training (AdamW).
+  2. FedProx proximal regularization: L_k(w) + (mu / 2) ||w - w_global||^2.
+  3. Differential Privacy (DP-SGD): Per-sample gradient clipping & Gaussian noise injection.
 """
 
 import copy
@@ -8,10 +11,11 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import TensorDataset, DataLoader
-from typing import Dict, Any, Tuple
+from typing import Dict, Any, Tuple, Optional
 import numpy as np
 
 from src.models.mlp import MalwareMLP
+from .dp_client import DPClientTrainer
 
 
 class FederatedClient:
@@ -22,7 +26,7 @@ class FederatedClient:
       - Local training uses only private data shard.
       - No access to validation or test data.
       - Communicates only model parameters and sample counts to server.
-      - Supports FedProx proximal regularization: L_k(w) + (mu / 2) ||w - w_global||^2
+      - Supports FedProx proximal regularization and DP-SGD per-sample clipping/noise.
     """
 
     def __init__(
@@ -56,13 +60,12 @@ class FederatedClient:
         config: Dict[str, Any],
     ) -> Tuple[Dict[str, torch.Tensor], int, Dict[str, float]]:
         """
-        Execute local SGD/AdamW training for specified local epochs.
-        If config specifies 'mu' > 0.0 (FedProx), penalizes local parameter divergence
-        from the frozen global reference model: (mu / 2) * ||w - w_global||^2.
+        Execute local training for specified local epochs.
+        Supports standard SGD/AdamW, FedProx (mu > 0), and DP-SGD (dp_enabled=True).
 
         Args:
             global_state_dict: Global model parameters received from server.
-            config: Training hyperparameter dictionary (lr, weight_decay, batch_size, local_epochs, mu).
+            config: Training hyperparameter dictionary (lr, weight_decay, batch_size, local_epochs, mu, dp_enabled, clip_norm, noise_multiplier).
 
         Returns:
             Tuple of (updated_state_dict, num_samples, training_metrics_dict).
@@ -76,6 +79,9 @@ class FederatedClient:
         lr = config.get("learning_rate", 1e-3)
         weight_decay = config.get("weight_decay", 1e-4)
         mu = float(config.get("mu", 0.0))  # FedProx proximal coefficient
+        dp_enabled = bool(config.get("dp_enabled", False))
+        clip_norm = float(config.get("clip_norm", 1.0))
+        noise_multiplier = float(config.get("noise_multiplier", 1.0))
 
         # Store frozen global parameter reference for proximal term calculation
         global_param_refs = {}
@@ -88,6 +94,41 @@ class FederatedClient:
         criterion = nn.CrossEntropyLoss()
         optimizer = optim.AdamW(self.local_model.parameters(), lr=lr, weight_decay=weight_decay)
 
+        # -------------------------------------------------------------
+        # Branch A: Differential Privacy (DP-SGD) Local Training
+        # -------------------------------------------------------------
+        if dp_enabled:
+            dp_trainer = DPClientTrainer(
+                clip_norm=clip_norm,
+                noise_multiplier=noise_multiplier,
+                device=str(self.device),
+            )
+            dp_stats = []
+            for epoch in range(local_epochs):
+                stat = dp_trainer.train_epoch_dpsgd(
+                    model=self.local_model,
+                    dataloader=loader,
+                    optimizer=optimizer,
+                    criterion=criterion,
+                    mu=mu,
+                    global_param_refs=global_param_refs if mu > 0.0 else None,
+                )
+                dp_stats.append(stat)
+
+            updated_state = {
+                k: v.cpu().detach().clone() for k, v in self.local_model.state_dict().items()
+            }
+            metrics = {
+                "final_loss": round(dp_stats[-1]["epoch_loss"], 4),
+                "clipping_fraction": round(dp_stats[-1]["clipping_fraction"], 4),
+                "mean_grad_norm": round(dp_stats[-1]["mean_grad_norm"], 4),
+                "noise_std": round(dp_stats[-1]["noise_std"], 6),
+            }
+            return updated_state, self.num_samples, metrics
+
+        # -------------------------------------------------------------
+        # Branch B: Standard FedAvg / FedProx Local Training
+        # -------------------------------------------------------------
         epoch_losses = []
         epoch_ce_losses = []
         epoch_prox_losses = []
@@ -135,7 +176,7 @@ class FederatedClient:
             epoch_ce_losses.append(avg_ce)
             epoch_prox_losses.append(avg_prox)
 
-        # 2. Extract updated state dict on CPU
+        # Extract updated state dict on CPU
         updated_state = {
             k: v.cpu().detach().clone() for k, v in self.local_model.state_dict().items()
         }
