@@ -27,6 +27,8 @@ from .plot_utils import generate_experiment_plots
 from .dp_accountant import RDPPrivacyAccountant
 from .secure_aggregation import SecureAggregationEngine, verify_secure_aggregation_cancellation
 from .adaptive_clipping import AdaptiveClippingController
+from .robust_aggregation import aggregate_coordinate_median, aggregate_trimmed_mean
+from .attacks import LabelFlipAttack, WeightPoisonAttack
 
 
 class FederatedExperiment:
@@ -82,6 +84,16 @@ class FederatedExperiment:
         else:
             self.adaptive_clipping = False
             self.adaptive_controller = None
+
+        # Robust Aggregation & Attack Configuration
+        self.aggregation_method = str(config.get("aggregation_method", "fedavg")).lower().strip()
+        self.trimmed_mean_beta = float(config.get("trimmed_mean_beta", 0.2))
+        self.attack_type = config.get("attack_type", None)
+        self.num_malicious_clients = int(config.get("num_malicious_clients", 0))
+        if self.num_malicious_clients > 0:
+            self.malicious_client_ids = set(range(self.num_malicious_clients))
+        else:
+            self.malicious_client_ids = set()
 
         default_name = config.get("experiment_name", "dirichlet_a01")
         self.output_dir = output_dir or pathlib.Path(f"models/federated/{default_name}")
@@ -205,14 +217,23 @@ class FederatedExperiment:
             json.dump(partition, f, indent=2)
 
         # 3. Instantiate Clients
-        print(f"\n[Step 3/6] Instantiating {self.num_clients} isolated Federated Client workers...")
+        mal_count = len(self.malicious_client_ids)
+        print(f"\n[Step 3/6] Instantiating {self.num_clients} isolated Federated Client workers ({mal_count} malicious)...")
         clients: List[FederatedClient] = []
         for client_id in range(self.num_clients):
             c_indices = partition[client_id]
+            y_client = self.y_train[c_indices].copy()
+
+            # Data poisoning: apply label-flipping attack to malicious client data
+            if client_id in self.malicious_client_ids and self.attack_type == "label_flip":
+                print(f"    [POISONING] Client {client_id:02d} infected with Label-Flipping attack (Malware -> Benign)")
+                label_attacker = LabelFlipAttack(attack_type="malware_to_benign", target_class=4)
+                y_client = label_attacker.apply(y_client)
+
             client = FederatedClient(
                 client_id=client_id,
                 X_local=self.X_train[c_indices],
-                y_local=self.y_train[c_indices],
+                y_local=y_client,
                 device=self.device,
             )
             clients.append(client)
@@ -242,7 +263,7 @@ class FederatedExperiment:
         print(f"    - Total {self.num_rounds}-round communication: {comm_cost['total_mb_all_rounds']:.2f} MB")
 
         # 5. Federated Training Loop
-        print(f"\n[Step 5/6] Starting Federated Training ({tag_str}, {self.num_rounds} global rounds)...")
+        print(f"\n[Step 5/6] Starting Federated Training ({tag_str}, {self.num_rounds} global rounds, Agg: {self.aggregation_method})...")
         print("=" * 105)
         print(f"{'Round':<7} | {'Val Loss':<10} | {'Val Accuracy':<14} | {'Val Macro F1':<14} | {'Val W-F1':<10} | {'Epsilon (eps)':<14} | {'Round Time':<11} | {'Cumul. MB':<10}")
         print("-" * 105)
@@ -297,10 +318,20 @@ class FederatedExperiment:
                     current_global_state,
                     client_train_config,
                 )
+
+                # Model poisoning: apply weight poisoning attack to malicious client updates
+                if client.client_id in self.malicious_client_ids and self.attack_type == "weight_poison":
+                    attacker = WeightPoisonAttack(
+                        attack_type="gaussian_noise",
+                        noise_std=1.5,
+                        seed=self.seed + round_idx * 100 + client.client_id,
+                    )
+                    updated_state = attacker.apply(updated_state, global_state_dict=current_global_state)
+
                 client_updates.append((updated_state, n_k))
                 client_metrics_list.append(local_metrics)
 
-            # 5c. Server Aggregation: Secure Aggregation vs Standard Plaintext
+            # 5c. Server Aggregation: Secure Aggregation vs Robust Aggregation vs Standard FedAvg
             total_train_samples = sum(n_k for _, n_k in client_updates)
             client_ids = list(range(len(client_updates)))
 
@@ -334,7 +365,13 @@ class FederatedExperiment:
                         "passed": v_res["passed"],
                     })
             else:
-                new_global_state = aggregate_fedavg(client_updates)
+                # Robust Aggregation (Median / Trimmed Mean) or Standard FedAvg
+                if self.aggregation_method in ["median", "coordinate_median", "fedmedian"]:
+                    new_global_state = aggregate_coordinate_median(client_updates)
+                elif self.aggregation_method in ["trimmed_mean", "fedtrimmedmean", "trimmed"]:
+                    new_global_state = aggregate_trimmed_mean(client_updates, beta=self.trimmed_mean_beta)
+                else:
+                    new_global_state = aggregate_fedavg(client_updates)
                 current_cancellation_error = None
 
             global_model.load_state_dict(new_global_state)
@@ -418,6 +455,8 @@ class FederatedExperiment:
                 "val_weighted_f1": val_w_f1,
                 "val_macro_precision": val_metrics["macro_precision"],
                 "val_macro_recall": val_metrics["macro_recall"],
+                "val_roc_auc_macro": val_metrics.get("roc_auc_macro"),
+                "val_roc_auc_weighted": val_metrics.get("roc_auc_weighted"),
                 "epsilon": current_eps_val,
                 "delta": self.target_delta if self.dp_enabled else None,
                 "optimal_renyi_order": current_opt_order,
@@ -499,6 +538,10 @@ class FederatedExperiment:
                 "adaptive_clipping": self.adaptive_clipping,
                 "adaptive_clipping_config": self.adaptive_controller.get_state() if self.adaptive_clipping else None,
                 "secagg_enabled": self.secagg_enabled,
+                "aggregation_method": self.aggregation_method,
+                "trimmed_mean_beta": self.trimmed_mean_beta if "trimmed" in self.aggregation_method else None,
+                "attack_type": self.attack_type,
+                "num_malicious_clients": self.num_malicious_clients,
                 "partition_type": self.partition_type,
                 "dirichlet_alpha": self.dirichlet_alpha,
                 "num_clients": self.num_clients,
@@ -525,6 +568,8 @@ class FederatedExperiment:
                 "weighted_f1": round_history[best_round - 1]["val_weighted_f1"],
                 "macro_precision": round_history[best_round - 1]["val_macro_precision"],
                 "macro_recall": round_history[best_round - 1]["val_macro_recall"],
+                "roc_auc_macro": round_history[best_round - 1].get("val_roc_auc_macro"),
+                "roc_auc_weighted": round_history[best_round - 1].get("val_roc_auc_weighted"),
                 "loss": round_history[best_round - 1]["val_loss"],
                 "per_class_f1": round_history[best_round - 1]["per_class_f1"],
             },

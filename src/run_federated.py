@@ -39,7 +39,10 @@ def main():
             "iid", "dirichlet_a10", "dirichlet_a1", "dirichlet_a05", "dirichlet_a01",
             "fedprox_a01_mu001", "fedprox_a01", "fedprox",
             "dp_low_noise", "dp_med_noise", "dp_high_noise", "secagg_only", "dp_secagg", "noniid_dp_secagg",
-            "smoke_test_dp", "adaptive_dp_smoke", "dp_adaptive_clipping", "noniid_dp_adaptive_clipping", "custom"
+            "smoke_test_dp", "adaptive_dp_smoke", "dp_adaptive_clipping", "noniid_dp_adaptive_clipping",
+            "attack_labelflip_fedavg", "attack_labelflip_trimmed_mean", "attack_labelflip_median",
+            "attack_weightpoison_fedavg", "attack_weightpoison_trimmed_mean", "attack_weightpoison_median",
+            "custom"
         ],
         help="Experiment configuration to execute",
     )
@@ -62,6 +65,22 @@ def main():
     parser.add_argument("--clip_learning_rate", type=float, default=0.1, help="Adaptive clipping learning rate eta")
     parser.add_argument("--min_clip_norm", type=float, default=0.1, help="Adaptive clipping lower bound C_min")
     parser.add_argument("--max_clip_norm", type=float, default=10.0, help="Adaptive clipping upper bound C_max")
+    parser.add_argument(
+        "--aggregation_method",
+        type=str,
+        default="fedavg",
+        choices=["fedavg", "median", "trimmed_mean"],
+        help="Aggregation algorithm to apply on server",
+    )
+    parser.add_argument("--trimmed_mean_beta", type=float, default=0.2, help="Trimmed mean beta fraction")
+    parser.add_argument(
+        "--attack_type",
+        type=str,
+        default="none",
+        choices=["none", "label_flip", "weight_poison"],
+        help="Malicious poisoning attack threat model",
+    )
+    parser.add_argument("--num_malicious_clients", type=int, default=0, help="Number of poisoned malicious clients")
 
     args = parser.parse_args()
 
@@ -171,6 +190,50 @@ def main():
         part_type = "dirichlet"
         alpha_val = args.alpha if args.alpha is not None else 0.1
         args.mu = args.mu if args.mu is not None else 0.01
+    elif args.experiment == "attack_labelflip_fedavg":
+        exp_name = "attack_labelflip_fedavg"
+        part_type = "iid"
+        alpha_val = None
+        args.aggregation_method = "fedavg"
+        args.attack_type = "label_flip"
+        args.num_malicious_clients = 2
+    elif args.experiment == "attack_labelflip_trimmed_mean":
+        exp_name = "attack_labelflip_trimmed_mean"
+        part_type = "iid"
+        alpha_val = None
+        args.aggregation_method = "trimmed_mean"
+        args.trimmed_mean_beta = 0.2
+        args.attack_type = "label_flip"
+        args.num_malicious_clients = 2
+    elif args.experiment == "attack_labelflip_median":
+        exp_name = "attack_labelflip_median"
+        part_type = "iid"
+        alpha_val = None
+        args.aggregation_method = "median"
+        args.attack_type = "label_flip"
+        args.num_malicious_clients = 2
+    elif args.experiment == "attack_weightpoison_fedavg":
+        exp_name = "attack_weightpoison_fedavg"
+        part_type = "iid"
+        alpha_val = None
+        args.aggregation_method = "fedavg"
+        args.attack_type = "weight_poison"
+        args.num_malicious_clients = 2
+    elif args.experiment == "attack_weightpoison_trimmed_mean":
+        exp_name = "attack_weightpoison_trimmed_mean"
+        part_type = "iid"
+        alpha_val = None
+        args.aggregation_method = "trimmed_mean"
+        args.trimmed_mean_beta = 0.2
+        args.attack_type = "weight_poison"
+        args.num_malicious_clients = 2
+    elif args.experiment == "attack_weightpoison_median":
+        exp_name = "attack_weightpoison_median"
+        part_type = "iid"
+        alpha_val = None
+        args.aggregation_method = "median"
+        args.attack_type = "weight_poison"
+        args.num_malicious_clients = 2
     else:
         exp_name = "custom_exp"
         part_type = "dirichlet" if args.alpha is not None else "iid"
@@ -194,6 +257,10 @@ def main():
         "clip_learning_rate": args.clip_learning_rate,
         "min_clip_norm": args.min_clip_norm,
         "max_clip_norm": args.max_clip_norm,
+        "aggregation_method": args.aggregation_method,
+        "trimmed_mean_beta": args.trimmed_mean_beta,
+        "attack_type": args.attack_type if args.attack_type != "none" else None,
+        "num_malicious_clients": args.num_malicious_clients,
         "num_clients": args.num_clients,
         "client_fraction": 1.0,
         "num_rounds": args.num_rounds,
