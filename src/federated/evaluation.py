@@ -14,6 +14,7 @@ from sklearn.metrics import (
     precision_score,
     recall_score,
     f1_score,
+    roc_auc_score,
     confusion_matrix,
     classification_report,
 )
@@ -63,6 +64,7 @@ def evaluate_model(
     total_loss = 0.0
     all_preds = []
     all_targets = []
+    all_probs = []
 
     t0 = time.perf_counter()
     with torch.no_grad():
@@ -71,14 +73,17 @@ def evaluate_model(
             logits = model(bx)
             loss = criterion(logits, by)
             total_loss += loss.item() * len(bx)
+            probs = torch.softmax(logits, dim=1)
             preds = torch.argmax(logits, dim=1)
             all_preds.extend(preds.cpu().numpy())
             all_targets.extend(by.cpu().numpy())
+            all_probs.extend(probs.cpu().numpy())
     inf_time = time.perf_counter() - t0
 
     avg_loss = total_loss / max(len(dataset), 1)
     y_true = np.array(all_targets)
     y_pred = np.array(all_preds)
+    y_prob = np.array(all_probs)
 
     acc = float(accuracy_score(y_true, y_pred))
     prec_macro = float(precision_score(y_true, y_pred, average="macro", zero_division=0))
@@ -87,9 +92,22 @@ def evaluate_model(
     f1_weighted = float(f1_score(y_true, y_pred, average="weighted", zero_division=0))
     cm = confusion_matrix(y_true, y_pred).tolist()
 
+    # Multi-class ROC-AUC calculation (One-vs-Rest)
+    try:
+        if len(np.unique(y_true)) > 1 and y_prob.shape[1] == len(class_names):
+            roc_auc_macro = float(roc_auc_score(y_true, y_prob, multi_class="ovr", average="macro"))
+            roc_auc_weighted = float(roc_auc_score(y_true, y_prob, multi_class="ovr", average="weighted"))
+        else:
+            roc_auc_macro = None
+            roc_auc_weighted = None
+    except Exception:
+        roc_auc_macro = None
+        roc_auc_weighted = None
+
     report_dict = classification_report(
         y_true,
         y_pred,
+        labels=list(range(len(class_names))),
         target_names=class_names,
         output_dict=True,
         digits=4,
@@ -97,11 +115,22 @@ def evaluate_model(
     )
 
     per_class = {}
-    for cname in class_names:
+    for idx, cname in enumerate(class_names):
+        # Per-class binary ROC-AUC
+        try:
+            binary_target = (y_true == idx).astype(int)
+            if len(np.unique(binary_target)) == 2:
+                class_auc = float(roc_auc_score(binary_target, y_prob[:, idx]))
+            else:
+                class_auc = None
+        except Exception:
+            class_auc = None
+
         per_class[cname] = {
             "precision": float(report_dict[cname]["precision"]),
             "recall": float(report_dict[cname]["recall"]),
             "f1_score": float(report_dict[cname]["f1-score"]),
+            "roc_auc": class_auc,
             "support": int(report_dict[cname]["support"]),
         }
 
@@ -114,8 +143,11 @@ def evaluate_model(
         "macro_recall": rec_macro,
         "macro_f1": f1_macro,
         "weighted_f1": f1_weighted,
+        "roc_auc_macro": roc_auc_macro,
+        "roc_auc_weighted": roc_auc_weighted,
         "per_class": per_class,
         "confusion_matrix": cm,
         "inference_time_seconds": round(inf_time, 6),
         "latency_ms_per_sample": round(latency_ms_per_sample, 4),
     }
+
