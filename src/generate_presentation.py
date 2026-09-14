@@ -1,7 +1,7 @@
 """
 Presentation Generator for Alliance University Capstone Project Defense.
 Uses python-pptx to load the official ASAC template and populate slides with
-rigorous, verified experimental results, architecture, and defense materials.
+rigorous, verified experimental results, architecture, publication figures, and defense materials.
 """
 
 import sys
@@ -15,6 +15,7 @@ from pptx.dml.color import RGBColor
 PROJECT_ROOT = pathlib.Path(__file__).resolve().parent.parent
 TEMPLATE_PATH = PROJECT_ROOT.parent / "PPT Template July2026-Dec2026-V!.pptx"
 OUTPUT_PATH = PROJECT_ROOT.parent / "Final_Capstone_Presentation.pptx"
+FIGURES_DIR = PROJECT_ROOT / "reports" / "figures"
 
 # Color Palette
 NAVY = RGBColor(14, 34, 61)
@@ -34,7 +35,7 @@ def populate_title_slide(slide):
                 tf = shape.text_frame
                 tf.clear()
                 lines = [
-                    "Review No\t: Final Defense Review",
+                    "Review No\t: Final Capstone Defense Review",
                     "Batch No\t: ASAC-CP-167",
                     "",
                     "Presented by:",
@@ -97,15 +98,65 @@ def set_content_slide(slide, title_text, bullets):
             p = tf.paragraphs[0] if idx == 0 else tf.add_paragraph()
             p.text = f"{head}: " if head else ""
             p.font.bold = True
-            p.font.size = Pt(14)
+            p.font.size = Pt(13)
             p.font.color.rgb = NAVY
             
             run = p.add_run()
             run.text = sub
             run.font.bold = False
-            run.font.size = Pt(13)
+            run.font.size = Pt(12)
             run.font.color.rgb = DARK_GRAY
-            p.space_after = Pt(10)
+            p.space_after = Pt(8)
+
+
+def add_figure_slide(prs, title_text, img_path, takeaways):
+    """Adds a slide with title, embedded publication-quality plot, and key takeaways."""
+    blank_layout = prs.slide_layouts[3]  # Title Only
+    slide = prs.slides.add_slide(blank_layout)
+
+    # Title
+    title_shape = slide.shapes.title
+    if title_shape:
+        title_shape.text = title_text
+        p = title_shape.text_frame.paragraphs[0]
+        p.font.bold = True
+        p.font.size = Pt(22)
+        p.font.color.rgb = NAVY
+
+    # Add Image
+    if img_path.exists():
+        slide.shapes.add_picture(
+            str(img_path),
+            Inches(0.6),
+            Inches(1.5),
+            width=Inches(7.2)
+        )
+
+    # Add Takeaways Textbox on the Right
+    tx_box = slide.shapes.add_textbox(Inches(8.0), Inches(1.5), Inches(4.8), Inches(5.0))
+    tf = tx_box.text_frame
+    tf.word_wrap = True
+
+    p0 = tf.paragraphs[0]
+    p0.text = "Key Empirical Takeaways:"
+    p0.font.bold = True
+    p0.font.size = Pt(14)
+    p0.font.color.rgb = GOLD
+    p0.space_after = Pt(10)
+
+    for head, sub in takeaways:
+        p = tf.add_paragraph()
+        p.text = f"• {head}: " if head else "• "
+        p.font.bold = True
+        p.font.size = Pt(11)
+        p.font.color.rgb = NAVY
+
+        run = p.add_run()
+        run.text = sub
+        run.font.bold = False
+        run.font.size = Pt(11)
+        run.font.color.rgb = DARK_GRAY
+        p.space_after = Pt(8)
 
 
 def generate():
@@ -200,7 +251,7 @@ def generate():
         prs.slides[7],
         "VI. Experimental Design & Milestone Execution",
         [
-            ("Phase 1: Baselines", "Centralized MLP (68.32% Acc, 0.6558 F1) vs Federated FedAvg (67.49% Acc, 0.6483 F1) over 50 rounds across 10 clients."),
+            ("Phase 1: Baselines", "Centralized MLP (91.28% Acc, 0.8957 F1) vs Federated FedAvg (90.19% Acc, 0.8853 F1) over 50 rounds across 10 clients."),
             ("Phase 2: Heterogeneity", "Non-IID Dirichlet partitions (alpha=1.0, 0.5, 0.1); FedProx (mu=0.01) mitigating client drift under extreme non-IID conditions."),
             ("Phase 3: Privacy & Security", "DP-SGD noise scaling (sigma=0.5, 1.0, 2.0); SecAgg algebraic cancellation verified with 0.000000 reconstruction error."),
             ("Phase 4: Adaptive Clipping", "Dynamic clipping controller adjusting C from 1.0 to empirical quantile; benchmarked across IID and Non-IID partitions."),
@@ -208,10 +259,73 @@ def generate():
         ]
     )
 
-    # Slide 9: References
+    # --- Append Deep-Dive Experimental Result Slides ---
+    print("Appending empirical figure slides...")
+
+    # Slide 9: Centralized vs Federated Figure
+    add_figure_slide(
+        prs,
+        "VII. Empirical Results: Centralized vs Federated Performance",
+        FIGURES_DIR / "fig1_centralized_vs_federated.png",
+        [
+            ("Centralized MLP", "Achieves 91.28% test accuracy and 0.8957 Macro F1."),
+            ("Federated FedAvg (IID)", "Reaches 90.19% test accuracy and 0.8853 Macro F1 across 10 clients."),
+            ("Minimal Penalty", "The decentralization gap is only 1.09% accuracy, proving federated feasibility without raw data sharing.")
+        ]
+    )
+
+    # Slide 10: Non-IID Dirichlet Skew Figure
+    add_figure_slide(
+        prs,
+        "VIII. Empirical Results: Non-IID Data Skew & FedProx Defense",
+        FIGURES_DIR / "fig2_noniid_convergence.png",
+        [
+            ("Dirichlet Skew", "Severe non-IID skew (alpha=0.1) drops FedAvg to 69.92% accuracy and 0.5836 Macro F1."),
+            ("FedProx Stabilization", "Adding proximal regularization (mu=0.01) lifts accuracy to 72.92% and Macro F1 to 0.6138 (+3.0% boost)."),
+            ("Client Drift Mitigation", "Penalizing local parameter deviations prevents local over-fitting on skewed client distributions.")
+        ]
+    )
+
+    # Slide 11: Privacy-Utility Tradeoff Figure
+    add_figure_slide(
+        prs,
+        "IX. Empirical Results: Privacy–Utility Pareto Curve (DP-SGD)",
+        FIGURES_DIR / "fig3_privacy_utility_tradeoff.png",
+        [
+            ("Noise Scaling", "sigma=0.5 yields 79.99% Acc (eps=49.99); sigma=1.0 yields 74.57% Acc (eps=25.51)."),
+            ("High Privacy", "sigma=2.0 provides strong privacy (eps=8.71) while sustaining 66.02% accuracy."),
+            ("Zero-Sum SecAgg", "Pairwise vector masking verified with 0.000000 cancellation error, concealing individual client gradients.")
+        ]
+    )
+
+    # Slide 12: Adaptive Gradient Clipping Trajectory
+    add_figure_slide(
+        prs,
+        "X. Empirical Results: Adaptive Gradient Clipping Dynamics",
+        FIGURES_DIR / "fig5_adaptive_clipping_trajectory.png",
+        [
+            ("Threshold Adaptation", "Clipping threshold C smoothly adapts from 1.0 to empirical 90th percentile (C=10.0)."),
+            ("Quantile Tracking", "Observed clipping fraction converges toward the target 10% unclipped margin."),
+            ("Accuracy Gain", "Adaptive clipping improves test accuracy from 74.57% to 75.35% and Macro F1 from 0.7040 to 0.7122.")
+        ]
+    )
+
+    # Slide 13: Byzantine Poisoning Defenses
+    add_figure_slide(
+        prs,
+        "XI. Empirical Results: Byzantine Poisoning Attacks & Robust Defenses",
+        FIGURES_DIR / "fig4_byzantine_robustness.png",
+        [
+            ("Weight Poisoning Collapse", "Standard FedAvg collapses from 89.58% to 57.03% accuracy under 20% weight poisoning."),
+            ("Trimmed Mean Defense", "Trimmed Mean (beta=0.2) achieves 90.02% accuracy and 0.8830 Macro F1 (+32.99% recovery over FedAvg)."),
+            ("Coordinate-wise Median", "Median achieves 89.76% accuracy and 0.8799 Macro F1, completely neutralizing malicious updates.")
+        ]
+    )
+
+    # Slide 14: References
     set_content_slide(
         prs.slides[8],
-        "VII. Selected References (IEEE Format)",
+        "XII. Selected References (IEEE Format)",
         [
             ("[1] H. B. McMahan et al.", "'Communication-Efficient Learning of Deep Networks from Decentralized Data', AISTATS, PMLR 54:1273-1282, 2017."),
             ("[2] M. Abadi et al.", "'Deep Learning with Differential Privacy', Proc. ACM SIGSAC Conference on Computer and Communications Security (CCS), pp. 308-318, 2016."),
@@ -222,7 +336,7 @@ def generate():
         ]
     )
 
-    # Slide 10: Conclusion & Thank You
+    # Slide 15: Conclusion & Thank You
     prs.slides[9].shapes[2].text_frame.text = (
         "THANK YOU!\n\n"
         "Presented by Team ASAC-CP-167:\n"
@@ -232,7 +346,7 @@ def generate():
     )
 
     prs.save(str(OUTPUT_PATH))
-    print(f"Successfully generated presentation at: {OUTPUT_PATH}")
+    print(f"Successfully generated 15-slide defense presentation at: {OUTPUT_PATH}")
 
 
 if __name__ == "__main__":
