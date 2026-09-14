@@ -122,7 +122,13 @@ class FederatedClient:
                 "final_loss": round(dp_stats[-1]["epoch_loss"], 4),
                 "clipping_fraction": round(dp_stats[-1]["clipping_fraction"], 4),
                 "mean_grad_norm": round(dp_stats[-1]["mean_grad_norm"], 4),
+                "median_grad_norm": round(dp_stats[-1]["median_grad_norm"], 4),
+                "p75_grad_norm": round(dp_stats[-1]["p75_grad_norm"], 4),
+                "p90_grad_norm": round(dp_stats[-1]["p90_grad_norm"], 4),
+                "p95_grad_norm": round(dp_stats[-1]["p95_grad_norm"], 4),
+                "clipping_threshold_C": round(dp_stats[-1]["clipping_threshold_C"], 6),
                 "noise_std": round(dp_stats[-1]["noise_std"], 6),
+                "effective_noise_std": round(dp_stats[-1]["effective_noise_std"], 6),
             }
             return updated_state, self.num_samples, metrics
 

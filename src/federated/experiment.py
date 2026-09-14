@@ -8,6 +8,7 @@ import os
 import copy
 import json
 import time
+import math
 import pathlib
 import numpy as np
 import pandas as pd
@@ -25,12 +26,13 @@ from .utils import set_seed, get_system_metadata, compute_communication_cost
 from .plot_utils import generate_experiment_plots
 from .dp_accountant import RDPPrivacyAccountant
 from .secure_aggregation import SecureAggregationEngine, verify_secure_aggregation_cancellation
+from .adaptive_clipping import AdaptiveClippingController
 
 
 class FederatedExperiment:
     """
     Federated Learning Experiment Manager.
-    Supports FedAvg, FedProx, Differential Privacy (DP-SGD), and Secure Aggregation (SecAgg).
+    Supports FedAvg, FedProx, Differential Privacy (DP-SGD), Adaptive Clipping, and Secure Aggregation (SecAgg).
     """
 
     def __init__(
@@ -61,6 +63,25 @@ class FederatedExperiment:
         self.noise_multiplier = float(config.get("noise_multiplier", 1.0))
         self.target_delta = float(config.get("target_delta", 1e-5))
         self.secagg_enabled = bool(config.get("secagg_enabled", False))
+
+        # Adaptive Clipping Configuration (Phase 7.1)
+        self.adaptive_clipping = bool(config.get("adaptive_clipping", False))
+        if self.adaptive_clipping and self.dp_enabled:
+            init_c = float(config.get("initial_clip_norm", config.get("initial_C", self.clip_norm)))
+            tgt_q = float(config.get("target_quantile", 0.90))
+            lr_c = float(config.get("clip_learning_rate", config.get("learning_rate_C", 0.1)))
+            c_min = float(config.get("min_clip_norm", config.get("C_min", 0.1)))
+            c_max = float(config.get("max_clip_norm", config.get("C_max", 10.0)))
+            self.adaptive_controller = AdaptiveClippingController(
+                initial_C=init_c,
+                target_quantile=tgt_q,
+                learning_rate=lr_c,
+                C_min=c_min,
+                C_max=c_max,
+            )
+        else:
+            self.adaptive_clipping = False
+            self.adaptive_controller = None
 
         default_name = config.get("experiment_name", "dirichlet_a01")
         self.output_dir = output_dir or pathlib.Path(f"models/federated/{default_name}")
@@ -223,7 +244,7 @@ class FederatedExperiment:
         # 5. Federated Training Loop
         print(f"\n[Step 5/6] Starting Federated Training ({tag_str}, {self.num_rounds} global rounds)...")
         print("=" * 105)
-        print(f"{'Round':<7} | {'Val Loss':<10} | {'Val Accuracy':<14} | {'Val Macro F1':<14} | {'Val W-F1':<10} | {'Epsilon (ε)':<12} | {'Round Time':<11} | {'Cumul. MB':<10}")
+        print(f"{'Round':<7} | {'Val Loss':<10} | {'Val Accuracy':<14} | {'Val Macro F1':<14} | {'Val W-F1':<10} | {'Epsilon (eps)':<14} | {'Round Time':<11} | {'Cumul. MB':<10}")
         print("-" * 105)
 
         round_history = []
@@ -254,6 +275,16 @@ class FederatedExperiment:
 
         for round_idx in range(1, self.num_rounds + 1):
             round_t0 = time.perf_counter()
+
+            # Dynamic / Adaptive clipping threshold for this round
+            if self.dp_enabled:
+                if self.adaptive_clipping and self.adaptive_controller is not None:
+                    current_round_C = self.adaptive_controller.get_current_C()
+                else:
+                    current_round_C = self.clip_norm
+                client_train_config["clip_norm"] = current_round_C
+            else:
+                current_round_C = None
 
             # 5a. Broadcast global state dict to participating clients
             current_global_state = copy.deepcopy(global_model.state_dict())
@@ -293,9 +324,10 @@ class FederatedExperiment:
                     template_state_dict=current_global_state,
                 )
 
-                # Verification check in round 1 and every 10 rounds
-                if round_idx == 1 or round_idx % 10 == 0:
-                    v_res = verify_secure_aggregation_cancellation(client_updates, self.secagg_engine, round_idx=round_idx)
+                # Verification check in round 1 and every round when SecAgg is enabled
+                v_res = verify_secure_aggregation_cancellation(client_updates, self.secagg_engine, round_idx=round_idx)
+                current_cancellation_error = v_res["max_cancellation_error"]
+                if round_idx == 1 or round_idx % 10 == 0 or round_idx == self.num_rounds:
                     secagg_verification_results.append({
                         "round": round_idx,
                         "max_cancellation_error": v_res["max_cancellation_error"],
@@ -303,10 +335,11 @@ class FederatedExperiment:
                     })
             else:
                 new_global_state = aggregate_fedavg(client_updates)
+                current_cancellation_error = None
 
             global_model.load_state_dict(new_global_state)
 
-            # 5d. Privacy Accounting Step
+            # 5d. Privacy Accounting Step & Gradient Norm Aggregation
             if self.dp_enabled:
                 p_record = self.accountant.step(
                     q=sampling_rate_q,
@@ -316,9 +349,29 @@ class FederatedExperiment:
                 )
                 current_eps_str = f"{p_record['cumulative_epsilon']:.2f}"
                 current_eps_val = p_record["cumulative_epsilon"]
+                current_opt_order = p_record["optimal_renyi_order"]
+                mean_clip_frac = float(np.mean([m.get("clipping_fraction", 0.0) for m in client_metrics_list]))
+                mean_grad_norm = float(np.mean([m.get("mean_grad_norm", 0.0) for m in client_metrics_list]))
+                median_grad_norm = float(np.mean([m.get("median_grad_norm", 0.0) for m in client_metrics_list]))
+                p75_grad_norm = float(np.mean([m.get("p75_grad_norm", 0.0) for m in client_metrics_list]))
+                p90_grad_norm = float(np.mean([m.get("p90_grad_norm", 0.0) for m in client_metrics_list]))
+                p95_grad_norm = float(np.mean([m.get("p95_grad_norm", 0.0) for m in client_metrics_list]))
+                eff_noise_std = float(np.mean([m.get("effective_noise_std", (self.noise_multiplier * current_round_C) / self.batch_size) for m in client_metrics_list]))
+
+                # Adaptive clipping controller update for next round
+                if self.adaptive_clipping and self.adaptive_controller is not None:
+                    self.adaptive_controller.update_from_clipping_fraction(mean_clip_frac, round_idx=round_idx)
             else:
                 current_eps_str = "None (Plain)"
                 current_eps_val = None
+                current_opt_order = None
+                mean_clip_frac = None
+                mean_grad_norm = None
+                median_grad_norm = None
+                p75_grad_norm = None
+                p90_grad_norm = None
+                p95_grad_norm = None
+                eff_noise_std = None
 
             round_elapsed = time.perf_counter() - round_t0
             cumul_comm_mb = round((comm_cost["total_bytes_per_round"] * round_idx) / (1024.0 * 1024.0), 2)
@@ -349,6 +402,16 @@ class FederatedExperiment:
 
             round_record = {
                 "round": round_idx,
+                "clip_norm": current_round_C,
+                "clipping_threshold_C": current_round_C,
+                "mean_gradient_norm": mean_grad_norm,
+                "median_gradient_norm": median_grad_norm,
+                "p75_gradient_norm": p75_grad_norm,
+                "p90_gradient_norm": p90_grad_norm,
+                "p95_gradient_norm": p95_grad_norm,
+                "clipping_fraction": mean_clip_frac,
+                "noise_multiplier": self.noise_multiplier if self.dp_enabled else None,
+                "effective_noise_std": eff_noise_std,
                 "val_loss": val_loss,
                 "val_accuracy": val_acc,
                 "val_macro_f1": val_macro_f1,
@@ -357,6 +420,9 @@ class FederatedExperiment:
                 "val_macro_recall": val_metrics["macro_recall"],
                 "epsilon": current_eps_val,
                 "delta": self.target_delta if self.dp_enabled else None,
+                "optimal_renyi_order": current_opt_order,
+                "mean_grad_norm": mean_grad_norm,  # preserved for backward compatibility
+                "secagg_cancellation_error": current_cancellation_error,
                 "per_class_f1": {c: val_metrics["per_class"][c]["f1_score"] for c in DEFAULT_CLASS_NAMES},
                 "round_time_seconds": round(round_elapsed, 2),
                 "cumulative_comm_mb": cumul_comm_mb,
@@ -364,7 +430,8 @@ class FederatedExperiment:
             round_history.append(round_record)
 
             if round_idx % 5 == 0 or round_idx == 1 or round_idx == self.num_rounds or is_best == "*":
-                print(f"Round {round_idx:2d}{is_best}| {val_loss:>8.4f}   | {val_acc*100:>11.2f}%   | {val_macro_f1:>12.4f}   | {val_w_f1:>8.4f}   | {current_eps_str:>12} | {round_elapsed:>8.2f}s    | {cumul_comm_mb:>8.2f} MB")
+                c_str = f" C={current_round_C:.2f}" if current_round_C is not None else ""
+                print(f"Round {round_idx:2d}{is_best}| {val_loss:>8.4f}   | {val_acc*100:>11.2f}%   | {val_macro_f1:>12.4f}   | {val_w_f1:>8.4f}   | {current_eps_str:>14}{c_str:<8} | {round_elapsed:>8.2f}s    | {cumul_comm_mb:>8.2f} MB")
 
         total_train_time = time.perf_counter() - experiment_t0
         print("=" * 105)
@@ -429,6 +496,8 @@ class FederatedExperiment:
                 "noise_multiplier": self.noise_multiplier if self.dp_enabled else None,
                 "target_delta": self.target_delta if self.dp_enabled else None,
                 "final_epsilon": privacy_summary["epsilon"] if self.dp_enabled else None,
+                "adaptive_clipping": self.adaptive_clipping,
+                "adaptive_clipping_config": self.adaptive_controller.get_state() if self.adaptive_clipping else None,
                 "secagg_enabled": self.secagg_enabled,
                 "partition_type": self.partition_type,
                 "dirichlet_alpha": self.dirichlet_alpha,

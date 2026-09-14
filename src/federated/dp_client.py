@@ -65,6 +65,8 @@ class DPClientTrainer:
         trainable_params = [p for p in model.parameters() if p.requires_grad]
         ce_per_sample = nn.CrossEntropyLoss(reduction="none")
 
+        all_sample_norms = []
+
         for bx, by in dataloader:
             bx, by = bx.to(self.device), by.to(self.device)
             batch_size = bx.size(0)
@@ -107,6 +109,7 @@ class DPClientTrainer:
                     sample_norm_sq = sample_norm_sq + torch.sum(g ** 2)
                 sample_norm = math.sqrt(float(sample_norm_sq.item()))
                 sum_grad_norms += sample_norm
+                all_sample_norms.append(sample_norm)
 
                 # L2 norm clipping factor
                 clip_factor = min(1.0, self.clip_norm / max(sample_norm, 1e-12))
@@ -133,9 +136,18 @@ class DPClientTrainer:
         clipping_fraction = total_clipped_samples / max(total_samples, 1)
         mean_grad_norm = sum_grad_norms / max(total_samples, 1)
 
+        norm_arr = np.array(all_sample_norms, dtype=np.float64) if len(all_sample_norms) > 0 else np.array([0.0])
+        effective_noise = float((self.noise_multiplier * self.clip_norm) / max(dataloader.batch_size, 1))
+
         return {
             "epoch_loss": float(mean_loss),
             "clipping_fraction": float(clipping_fraction),
             "mean_grad_norm": float(mean_grad_norm),
-            "noise_std": float((self.noise_multiplier * self.clip_norm) / max(dataloader.batch_size, 1)),
+            "median_grad_norm": float(np.median(norm_arr)),
+            "p75_grad_norm": float(np.percentile(norm_arr, 75)),
+            "p90_grad_norm": float(np.percentile(norm_arr, 90)),
+            "p95_grad_norm": float(np.percentile(norm_arr, 95)),
+            "clipping_threshold_C": float(self.clip_norm),
+            "noise_std": effective_noise,
+            "effective_noise_std": effective_noise,
         }

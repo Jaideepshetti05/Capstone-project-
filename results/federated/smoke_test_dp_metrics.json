@@ -1,0 +1,561 @@
+{
+  "metadata": {
+    "experiment_name": "smoke_test_dp",
+    "algorithm": "FedAvg",
+    "mu": 0.0,
+    "dp_enabled": true,
+    "clip_norm": 1.0,
+    "noise_multiplier": 1.0,
+    "target_delta": 1e-05,
+    "final_epsilon": 5.0388,
+    "secagg_enabled": true,
+    "partition_type": "iid",
+    "dirichlet_alpha": null,
+    "num_clients": 10,
+    "client_fraction": 1.0,
+    "num_rounds": 2,
+    "local_epochs": 2,
+    "batch_size": 64,
+    "learning_rate": 0.001,
+    "weight_decay": 0.0001,
+    "seed": 42,
+    "total_train_time_seconds": 40.57,
+    "best_round": 2,
+    "system_metadata": {
+      "python_version": "3.14.0",
+      "platform": "Windows-11-10.0.26200-SP0",
+      "processor": "Intel64 Family 6 Model 189 Stepping 1, GenuineIntel",
+      "pytorch_version": "2.10.0+cpu",
+      "numpy_version": "2.4.1",
+      "cuda_available": false,
+      "device": "cpu"
+    },
+    "model_architecture": {
+      "in_features": 443,
+      "num_classes": 5,
+      "hidden_dims": [
+        256,
+        128,
+        64
+      ],
+      "dropout_rate": 0.2,
+      "total_parameters": 156037,
+      "trainable_parameters": 156037
+    }
+  },
+  "partition_validation": {
+    "status": "VALID",
+    "num_clients": 10,
+    "total_samples": 8062,
+    "unique_samples": 8062,
+    "heterogeneity_summary": {
+      "min_client_size": 804,
+      "max_client_size": 809,
+      "mean_client_size": 806.2,
+      "std_client_size": 1.47,
+      "var_client_size": 2.16,
+      "mean_client_entropy_bits": 2.2174,
+      "min_client_entropy_bits": 2.2162,
+      "max_possible_entropy_bits": 2.3219,
+      "mean_tvd_from_global_prior": 0.0009,
+      "max_tvd_from_global_prior": 0.0012
+    },
+    "client_stats": {
+      "client_0": {
+        "client_id": 0,
+        "sample_count": 809,
+        "sample_percentage": 10.03,
+        "class_counts": {
+          "0": 88,
+          "1": 143,
+          "2": 274,
+          "3": 178,
+          "4": 126
+        },
+        "named_class_counts": {
+          "Adware": 88,
+          "Banking malware": 143,
+          "SMS malware": 274,
+          "Riskware": 178,
+          "Benign": 126
+        },
+        "class_percentages": {
+          "Adware": 10.88,
+          "Banking malware": 17.68,
+          "SMS malware": 33.87,
+          "Riskware": 22.0,
+          "Benign": 15.57
+        },
+        "dominant_class": "SMS malware",
+        "dominant_class_percentage": 33.87,
+        "entropy_bits": 2.2175,
+        "tvd_from_global_prior": 0.0005
+      },
+      "client_1": {
+        "client_id": 1,
+        "sample_count": 808,
+        "sample_percentage": 10.02,
+        "class_counts": {
+          "0": 88,
+          "1": 143,
+          "2": 273,
+          "3": 178,
+          "4": 126
+        },
+        "named_class_counts": {
+          "Adware": 88,
+          "Banking malware": 143,
+          "SMS malware": 273,
+          "Riskware": 178,
+          "Benign": 126
+        },
+        "class_percentages": {
+          "Adware": 10.89,
+          "Banking malware": 17.7,
+          "SMS malware": 33.79,
+          "Riskware": 22.03,
+          "Benign": 15.59
+        },
+        "dominant_class": "SMS malware",
+        "dominant_class_percentage": 33.79,
+        "entropy_bits": 2.2183,
+        "tvd_from_global_prior": 0.0011
+      },
+      "client_2": {
+        "client_id": 2,
+        "sample_count": 807,
+        "sample_percentage": 10.01,
+        "class_counts": {
+          "0": 88,
+          "1": 143,
+          "2": 273,
+          "3": 177,
+          "4": 126
+        },
+        "named_class_counts": {
+          "Adware": 88,
+          "Banking malware": 143,
+          "SMS malware": 273,
+          "Riskware": 177,
+          "Benign": 126
+        },
+        "class_percentages": {
+          "Adware": 10.9,
+          "Banking malware": 17.72,
+          "SMS malware": 33.83,
+          "Riskware": 21.93,
+          "Benign": 15.61
+        },
+        "dominant_class": "SMS malware",
+        "dominant_class_percentage": 33.83,
+        "entropy_bits": 2.2184,
+        "tvd_from_global_prior": 0.001
+      },
+      "client_3": {
+        "client_id": 3,
+        "sample_count": 807,
+        "sample_percentage": 10.01,
+        "class_counts": {
+          "0": 88,
+          "1": 143,
+          "2": 273,
+          "3": 177,
+          "4": 126
+        },
+        "named_class_counts": {
+          "Adware": 88,
+          "Banking malware": 143,
+          "SMS malware": 273,
+          "Riskware": 177,
+          "Benign": 126
+        },
+        "class_percentages": {
+          "Adware": 10.9,
+          "Banking malware": 17.72,
+          "SMS malware": 33.83,
+          "Riskware": 21.93,
+          "Benign": 15.61
+        },
+        "dominant_class": "SMS malware",
+        "dominant_class_percentage": 33.83,
+        "entropy_bits": 2.2184,
+        "tvd_from_global_prior": 0.001
+      },
+      "client_4": {
+        "client_id": 4,
+        "sample_count": 806,
+        "sample_percentage": 10.0,
+        "class_counts": {
+          "0": 88,
+          "1": 143,
+          "2": 273,
+          "3": 177,
+          "4": 125
+        },
+        "named_class_counts": {
+          "Adware": 88,
+          "Banking malware": 143,
+          "SMS malware": 273,
+          "Riskware": 177,
+          "Benign": 125
+        },
+        "class_percentages": {
+          "Adware": 10.92,
+          "Banking malware": 17.74,
+          "SMS malware": 33.87,
+          "Riskware": 21.96,
+          "Benign": 15.51
+        },
+        "dominant_class": "SMS malware",
+        "dominant_class_percentage": 33.87,
+        "entropy_bits": 2.2178,
+        "tvd_from_global_prior": 0.0007
+      },
+      "client_5": {
+        "client_id": 5,
+        "sample_count": 806,
+        "sample_percentage": 10.0,
+        "class_counts": {
+          "0": 88,
+          "1": 143,
+          "2": 273,
+          "3": 177,
+          "4": 125
+        },
+        "named_class_counts": {
+          "Adware": 88,
+          "Banking malware": 143,
+          "SMS malware": 273,
+          "Riskware": 177,
+          "Benign": 125
+        },
+        "class_percentages": {
+          "Adware": 10.92,
+          "Banking malware": 17.74,
+          "SMS malware": 33.87,
+          "Riskware": 21.96,
+          "Benign": 15.51
+        },
+        "dominant_class": "SMS malware",
+        "dominant_class_percentage": 33.87,
+        "entropy_bits": 2.2178,
+        "tvd_from_global_prior": 0.0007
+      },
+      "client_6": {
+        "client_id": 6,
+        "sample_count": 805,
+        "sample_percentage": 9.99,
+        "class_counts": {
+          "0": 87,
+          "1": 143,
+          "2": 273,
+          "3": 177,
+          "4": 125
+        },
+        "named_class_counts": {
+          "Adware": 87,
+          "Banking malware": 143,
+          "SMS malware": 273,
+          "Riskware": 177,
+          "Benign": 125
+        },
+        "class_percentages": {
+          "Adware": 10.81,
+          "Banking malware": 17.76,
+          "SMS malware": 33.91,
+          "Riskware": 21.99,
+          "Benign": 15.53
+        },
+        "dominant_class": "SMS malware",
+        "dominant_class_percentage": 33.91,
+        "entropy_bits": 2.2166,
+        "tvd_from_global_prior": 0.0008
+      },
+      "client_7": {
+        "client_id": 7,
+        "sample_count": 805,
+        "sample_percentage": 9.99,
+        "class_counts": {
+          "0": 87,
+          "1": 143,
+          "2": 273,
+          "3": 177,
+          "4": 125
+        },
+        "named_class_counts": {
+          "Adware": 87,
+          "Banking malware": 143,
+          "SMS malware": 273,
+          "Riskware": 177,
+          "Benign": 125
+        },
+        "class_percentages": {
+          "Adware": 10.81,
+          "Banking malware": 17.76,
+          "SMS malware": 33.91,
+          "Riskware": 21.99,
+          "Benign": 15.53
+        },
+        "dominant_class": "SMS malware",
+        "dominant_class_percentage": 33.91,
+        "entropy_bits": 2.2166,
+        "tvd_from_global_prior": 0.0008
+      },
+      "client_8": {
+        "client_id": 8,
+        "sample_count": 805,
+        "sample_percentage": 9.99,
+        "class_counts": {
+          "0": 87,
+          "1": 143,
+          "2": 273,
+          "3": 177,
+          "4": 125
+        },
+        "named_class_counts": {
+          "Adware": 87,
+          "Banking malware": 143,
+          "SMS malware": 273,
+          "Riskware": 177,
+          "Benign": 125
+        },
+        "class_percentages": {
+          "Adware": 10.81,
+          "Banking malware": 17.76,
+          "SMS malware": 33.91,
+          "Riskware": 21.99,
+          "Benign": 15.53
+        },
+        "dominant_class": "SMS malware",
+        "dominant_class_percentage": 33.91,
+        "entropy_bits": 2.2166,
+        "tvd_from_global_prior": 0.0008
+      },
+      "client_9": {
+        "client_id": 9,
+        "sample_count": 804,
+        "sample_percentage": 9.97,
+        "class_counts": {
+          "0": 87,
+          "1": 142,
+          "2": 273,
+          "3": 177,
+          "4": 125
+        },
+        "named_class_counts": {
+          "Adware": 87,
+          "Banking malware": 142,
+          "SMS malware": 273,
+          "Riskware": 177,
+          "Benign": 125
+        },
+        "class_percentages": {
+          "Adware": 10.82,
+          "Banking malware": 17.66,
+          "SMS malware": 33.96,
+          "Riskware": 22.01,
+          "Benign": 15.55
+        },
+        "dominant_class": "SMS malware",
+        "dominant_class_percentage": 33.96,
+        "entropy_bits": 2.2162,
+        "tvd_from_global_prior": 0.0012
+      }
+    }
+  },
+  "communication_cost": {
+    "num_parameters": 156037,
+    "bytes_per_parameter": 4,
+    "format": "uncompressed_float32",
+    "model_size_bytes": 624148,
+    "model_size_kb": 609.52,
+    "model_size_mb": 0.5952,
+    "downlink_bytes_per_round": 6241480,
+    "uplink_bytes_per_round": 6241480,
+    "total_bytes_per_round": 12482960,
+    "total_mb_per_round": 11.9047,
+    "total_bytes_all_rounds": 24965920,
+    "total_mb_all_rounds": 23.81
+  },
+  "privacy_accounting": {
+    "epsilon": 5.0388,
+    "delta": 1e-05,
+    "optimal_renyi_order": 4.5,
+    "total_steps": 52,
+    "total_rounds": 2,
+    "orders_evaluated": 32,
+    "history": [
+      {
+        "round": 1,
+        "sampling_rate_q": 0.07938476804763085,
+        "noise_multiplier_sigma": 1.0,
+        "steps_in_round": 26,
+        "cumulative_steps": 26,
+        "cumulative_epsilon": 4.1641,
+        "target_delta": 1e-05,
+        "optimal_renyi_order": 4.5
+      },
+      {
+        "round": 2,
+        "sampling_rate_q": 0.07938476804763085,
+        "noise_multiplier_sigma": 1.0,
+        "steps_in_round": 26,
+        "cumulative_steps": 52,
+        "cumulative_epsilon": 5.0388,
+        "target_delta": 1e-05,
+        "optimal_renyi_order": 4.5
+      }
+    ]
+  },
+  "secagg_verification": [
+    {
+      "round": 1,
+      "max_cancellation_error": 5.9575071764683685e-08,
+      "passed": true
+    }
+  ],
+  "best_validation_metrics": {
+    "round": 2,
+    "accuracy": 0.4557291666666667,
+    "macro_f1": 0.30841439479218014,
+    "weighted_f1": 0.39072835770137126,
+    "macro_precision": 0.42808537329147045,
+    "macro_recall": 0.3493106283042597,
+    "loss": 1.5899,
+    "per_class_f1": {
+      "Adware": 0.10362694300518134,
+      "Banking malware": 0.38144329896907214,
+      "SMS malware": 0.7080366225839267,
+      "Riskware": 0.2752808988764045,
+      "Benign": 0.07368421052631578
+    }
+  },
+  "final_round_validation_metrics": {
+    "round": 2,
+    "accuracy": 0.4557291666666667,
+    "macro_f1": 0.30841439479218014,
+    "weighted_f1": 0.39072835770137126,
+    "loss": 1.5899
+  },
+  "locked_test_metrics": {
+    "loss": 1.568,
+    "accuracy": 0.4453125,
+    "macro_precision": 0.3884362754628857,
+    "macro_recall": 0.330732951191395,
+    "macro_f1": 0.2822914580983202,
+    "weighted_f1": 0.37001549206060225,
+    "per_class": {
+      "Adware": {
+        "precision": 0.06306306306306306,
+        "recall": 0.028,
+        "f1_score": 0.038781163434903045,
+        "support": 250
+      },
+      "Banking malware": {
+        "precision": 0.29207232267037553,
+        "recall": 0.5134474327628362,
+        "f1_score": 0.3723404255319149,
+        "support": 409
+      },
+      "SMS malware": {
+        "precision": 0.5674381484437351,
+        "recall": 0.910371318822023,
+        "f1_score": 0.6991150442477876,
+        "support": 781
+      },
+      "Riskware": {
+        "precision": 0.43137254901960786,
+        "recall": 0.17391304347826086,
+        "f1_score": 0.24788732394366197,
+        "support": 506
+      },
+      "Benign": {
+        "precision": 0.5882352941176471,
+        "recall": 0.027932960893854747,
+        "f1_score": 0.05333333333333334,
+        "support": 358
+      }
+    },
+    "confusion_matrix": [
+      [
+        7,
+        96,
+        117,
+        29,
+        1
+      ],
+      [
+        6,
+        210,
+        171,
+        18,
+        4
+      ],
+      [
+        2,
+        63,
+        711,
+        5,
+        0
+      ],
+      [
+        57,
+        219,
+        140,
+        88,
+        2
+      ],
+      [
+        39,
+        131,
+        114,
+        64,
+        10
+      ]
+    ],
+    "inference_time_seconds": 0.024582,
+    "latency_ms_per_sample": 0.0107
+  },
+  "round_by_round_history": [
+    {
+      "round": 1,
+      "val_loss": 1.6534,
+      "val_accuracy": 0.3168402777777778,
+      "val_macro_f1": 0.2316874723259154,
+      "val_weighted_f1": 0.28594997491321444,
+      "val_macro_precision": 0.3572118515245283,
+      "val_macro_recall": 0.2847681917920939,
+      "epsilon": 4.1641,
+      "delta": 1e-05,
+      "per_class_f1": {
+        "Adware": 0.07526881720430108,
+        "Banking malware": 0.3512092534174553,
+        "SMS malware": 0.48154093097913325,
+        "Riskware": 0.20786516853932585,
+        "Benign": 0.0425531914893617
+      },
+      "round_time_seconds": 20.18,
+      "cumulative_comm_mb": 11.9
+    },
+    {
+      "round": 2,
+      "val_loss": 1.5899,
+      "val_accuracy": 0.4557291666666667,
+      "val_macro_f1": 0.30841439479218014,
+      "val_weighted_f1": 0.39072835770137126,
+      "val_macro_precision": 0.42808537329147045,
+      "val_macro_recall": 0.3493106283042597,
+      "epsilon": 5.0388,
+      "delta": 1e-05,
+      "per_class_f1": {
+        "Adware": 0.10362694300518134,
+        "Banking malware": 0.38144329896907214,
+        "SMS malware": 0.7080366225839267,
+        "Riskware": 0.2752808988764045,
+        "Benign": 0.07368421052631578
+      },
+      "round_time_seconds": 20.35,
+      "cumulative_comm_mb": 23.81
+    }
+  ]
+}

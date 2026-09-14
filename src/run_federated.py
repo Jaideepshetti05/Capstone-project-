@@ -39,7 +39,7 @@ def main():
             "iid", "dirichlet_a10", "dirichlet_a1", "dirichlet_a05", "dirichlet_a01",
             "fedprox_a01_mu001", "fedprox_a01", "fedprox",
             "dp_low_noise", "dp_med_noise", "dp_high_noise", "secagg_only", "dp_secagg", "noniid_dp_secagg",
-            "smoke_test_dp", "custom"
+            "smoke_test_dp", "adaptive_dp_smoke", "dp_adaptive_clipping", "noniid_dp_adaptive_clipping", "custom"
         ],
         help="Experiment configuration to execute",
     )
@@ -57,11 +57,48 @@ def main():
     parser.add_argument("--clip_norm", type=float, default=1.0, help="DP per-sample clipping norm C")
     parser.add_argument("--delta", type=float, default=1e-5, help="DP target delta")
     parser.add_argument("--secagg", action="store_true", help="Enable Secure Aggregation (SecAgg)")
+    parser.add_argument("--adaptive_clipping", action="store_true", help="Enable adaptive quantile-based gradient clipping")
+    parser.add_argument("--target_quantile", type=float, default=0.90, help="Adaptive clipping target quantile gamma")
+    parser.add_argument("--clip_learning_rate", type=float, default=0.1, help="Adaptive clipping learning rate eta")
+    parser.add_argument("--min_clip_norm", type=float, default=0.1, help="Adaptive clipping lower bound C_min")
+    parser.add_argument("--max_clip_norm", type=float, default=10.0, help="Adaptive clipping upper bound C_max")
 
     args = parser.parse_args()
 
-    # Presets for Phase 6 Experiments
-    if args.experiment == "dp_low_noise":
+    # Presets for Phase 6 and Phase 7 Experiments
+    if args.experiment == "adaptive_dp_smoke":
+        args.dp = True
+        args.sigma = 1.0
+        args.clip_norm = 1.0
+        args.adaptive_clipping = True
+        args.target_quantile = 0.90
+        args.clip_learning_rate = 0.1
+        args.min_clip_norm = 0.1
+        args.max_clip_norm = 10.0
+        args.secagg = True
+        args.num_rounds = 5
+        exp_name = "adaptive_dp_smoke"
+        part_type = "iid"
+        alpha_val = None
+    elif args.experiment == "dp_adaptive_clipping":
+        args.dp = True
+        args.sigma = 1.0
+        args.clip_norm = 1.0
+        args.adaptive_clipping = True
+        args.secagg = True
+        exp_name = "dp_adaptive_clipping"
+        part_type = "iid"
+        alpha_val = None
+    elif args.experiment == "noniid_dp_adaptive_clipping":
+        args.dp = True
+        args.sigma = 1.0
+        args.clip_norm = 1.0
+        args.adaptive_clipping = True
+        args.secagg = True
+        exp_name = "noniid_dp_adaptive_clipping"
+        part_type = "dirichlet"
+        alpha_val = 0.1
+    elif args.experiment == "dp_low_noise":
         args.dp = True
         args.sigma = 0.5
         args.clip_norm = 1.0
@@ -152,6 +189,11 @@ def main():
         "clip_norm": args.clip_norm,
         "target_delta": args.delta,
         "secagg_enabled": args.secagg,
+        "adaptive_clipping": args.adaptive_clipping,
+        "target_quantile": args.target_quantile,
+        "clip_learning_rate": args.clip_learning_rate,
+        "min_clip_norm": args.min_clip_norm,
+        "max_clip_norm": args.max_clip_norm,
         "num_clients": args.num_clients,
         "client_fraction": 1.0,
         "num_rounds": args.num_rounds,

@@ -1,0 +1,30 @@
+{
+  "epsilon": 5.0388,
+  "delta": 1e-05,
+  "optimal_renyi_order": 4.5,
+  "total_steps": 52,
+  "total_rounds": 2,
+  "orders_evaluated": 32,
+  "history": [
+    {
+      "round": 1,
+      "sampling_rate_q": 0.07938476804763085,
+      "noise_multiplier_sigma": 1.0,
+      "steps_in_round": 26,
+      "cumulative_steps": 26,
+      "cumulative_epsilon": 4.1641,
+      "target_delta": 1e-05,
+      "optimal_renyi_order": 4.5
+    },
+    {
+      "round": 2,
+      "sampling_rate_q": 0.07938476804763085,
+      "noise_multiplier_sigma": 1.0,
+      "steps_in_round": 26,
+      "cumulative_steps": 52,
+      "cumulative_epsilon": 5.0388,
+      "target_delta": 1e-05,
+      "optimal_renyi_order": 4.5
+    }
+  ]
+}
