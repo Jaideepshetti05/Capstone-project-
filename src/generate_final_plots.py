@@ -46,21 +46,23 @@ def plot_centralized_vs_federated():
     with open(cent_path, "r") as f:
         cent = json.load(f)
 
+    tr = cent.get("test_results", cent)
+
     fed_iid = load_metric("iid_fedavg") or load_metric("iid")
     if not fed_iid:
         return
 
     models = ["Logistic Reg.", "Random Forest", "Centralized MLP", "FedAvg (IID)"]
     accs = [
-        cent["logistic_regression"]["test"]["accuracy"] * 100,
-        cent["random_forest"]["test"]["accuracy"] * 100,
-        cent["mlp"]["test"]["accuracy"] * 100,
+        tr["logistic_regression"]["accuracy"] * 100,
+        tr["random_forest"]["accuracy"] * 100,
+        tr["mlp_neural_network"]["accuracy"] * 100,
         fed_iid["locked_test_metrics"]["accuracy"] * 100,
     ]
     f1s = [
-        cent["logistic_regression"]["test"]["macro_f1"],
-        cent["random_forest"]["test"]["macro_f1"],
-        cent["mlp"]["test"]["macro_f1"],
+        tr["logistic_regression"]["macro_f1"],
+        tr["random_forest"]["macro_f1"],
+        tr["mlp_neural_network"]["macro_f1"],
         fed_iid["locked_test_metrics"]["macro_f1"],
     ]
 
@@ -253,12 +255,49 @@ def plot_robustness_comparison():
     print(f"Saved: {out_path}")
 
 
+def plot_adaptive_clipping_trajectory():
+    """Figure 5: Adaptive Gradient Clipping Trajectory across 50 Global Rounds."""
+    d = load_metric("dp_adaptive_clipping")
+    if not d:
+        return
+
+    history = d.get("round_by_round_history", [])
+    rounds = [r["round"] for r in history]
+    c_vals = [r.get("clipping_threshold_C", r.get("clip_norm", 1.0)) for r in history]
+    clip_fracs = [r.get("clipping_fraction", 0.0) * 100 for r in history]
+
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 4.5), dpi=300)
+
+    ax1.plot(rounds, c_vals, "o-", color="#1f77b4", linewidth=2.0, markersize=4, label="Clipping Threshold C")
+    ax1.set_xlabel("Communication Round")
+    ax1.set_ylabel("Clipping Norm C")
+    ax1.set_title("Adaptive Threshold C Trajectory (Target Quantile = 0.90)")
+    ax1.grid(True)
+    ax1.legend(loc="upper left")
+
+    ax2.plot(rounds, clip_fracs, "s-", color="#d62728", linewidth=1.8, markersize=4, label="Observed Clip Fraction (%)")
+    ax2.axhline(10.0, color="black", linestyle="--", alpha=0.7, label="Target (1 - 0.90 = 10%)")
+    ax2.set_xlabel("Communication Round")
+    ax2.set_ylabel("Clipped Samples (%)")
+    ax2.set_title("Empirical Gradient Clipping Fraction")
+    ax2.grid(True)
+    ax2.legend(loc="upper right")
+
+    fig.suptitle("Differential Privacy: Adaptive Gradient Clipping Dynamics", y=1.02)
+    fig.tight_layout()
+    out_path = FIGURES_DIR / "fig5_adaptive_clipping_trajectory.png"
+    fig.savefig(out_path)
+    plt.close(fig)
+    print(f"Saved: {out_path}")
+
+
 def generate_all_plots():
     print("Generating comprehensive figures...")
     plot_centralized_vs_federated()
     plot_noniid_convergence()
     plot_privacy_utility_tradeoff()
     plot_robustness_comparison()
+    plot_adaptive_clipping_trajectory()
     print("All figures successfully created in reports/figures/")
 
 
