@@ -227,7 +227,7 @@ git clone https://github.com/Jaideepshetti05/Capstone-project-.git
 cd Capstone-project-/implementation
 
 # Install dependencies
-pip install torch numpy pandas scikit-learn scipy matplotlib seaborn tabulate pytest
+pip install -r requirements.txt
 ```
 
 ### Running Unit Tests
