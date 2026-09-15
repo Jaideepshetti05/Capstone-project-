@@ -122,6 +122,22 @@ Server summation cancels all masks: $\sum_{k=1}^K \mathbf{y}_k = \sum_{k=1}^K \f
 - **DP High Noise ($\sigma=2.0$):** 66.02% Test Acc, 0.5592 Macro F1, $\varepsilon = 8.71$.
 - **Non-IID + DP + SecAgg ($\alpha=0.1, \sigma=1.0$):** 52.65% Test Acc, 0.4041 Macro F1. Demonstrates the compounding penalty of noise on sparse minority classes.
 
+### 5.4 Adaptive Gradient Clipping
+- **DP + Adaptive Clipping (IID, $\sigma=1.0$):** 75.35% Test Acc, 0.7122 Macro F1, $\varepsilon = 25.51$, ROC-AUC = 0.9122. Adaptive quantile clipping improved accuracy by **+0.78%** over static clipping while maintaining identical privacy guarantees.
+- **Non-IID + DP + Adaptive Clipping ($\alpha=0.1$):** 54.12% Test Acc, 0.4149 Macro F1, ROC-AUC = 0.7662. Demonstrates marginal improvement (+1.47%) even under extreme heterogeneity.
+
+### 5.5 Byzantine Robustness Under Poisoning Attacks (20% Malicious Clients)
+
+**Label-Flipping Attack (Targeted Evasion):**
+- **FedAvg (No Defense):** 89.58% Test Acc, 0.8716 Macro F1. Label flipping had minimal impact on FedAvg due to the label-proportional weighting diluting poisoned gradient contributions.
+- **Trimmed Mean ($\beta=0.2$):** 90.23% Test Acc, 0.8815 Macro F1. Trimmed mean successfully filtered outlier updates.
+- **Coordinate Median:** 90.15% Test Acc, 0.8804 Macro F1. Median aggregation provided comparable robustness.
+
+**Model Weight Poisoning (Byzantine Disruption):**
+- **FedAvg (No Defense):** 57.03% Test Acc, 0.4420 Macro F1. Catastrophic degradation — model accuracy collapsed by **33.16%** under Byzantine noise injection.
+- **Trimmed Mean ($\beta=0.2$):** **90.02%** Test Acc, 0.8830 Macro F1. Full recovery — trimmed outlier exclusion completely neutralized the attack.
+- **Coordinate Median:** **89.76%** Test Acc, 0.8799 Macro F1. Near-complete recovery through coordinate-wise outlier resistance.
+
 ---
 
 ## 6. Discussion & Architectural Limitations
@@ -134,4 +150,4 @@ Server summation cancels all masks: $\sum_{k=1}^K \mathbf{y}_k = \sum_{k=1}^K \f
 
 ## 7. Conclusion & Future Work
 
-This research confirms that Privacy-Preserving Federated Learning is highly viable for mobile malware threat detection. Plaintext FedAvg achieves **90.19% test accuracy**, dual-layer DP and Secure Aggregation protect sensitive client telemetry with strict bounds ($\varepsilon=25.51, \delta=10^{-5}$), FedProx restores stability under extreme label heterogeneity, and robust aggregation defenses safeguard the global consensus against poisoning adversaries. Future extensions will investigate asynchronous FL frameworks and homomorphic ciphertext computation.
+This research confirms that Privacy-Preserving Federated Learning is highly viable for mobile malware threat detection. Plaintext FedAvg achieves **90.19% test accuracy**, dual-layer DP and Secure Aggregation protect sensitive client telemetry with strict bounds ($\varepsilon=25.51, \delta=10^{-5}$), FedProx restores stability under extreme label heterogeneity (+3.00%), adaptive gradient clipping improves privacy-utility tradeoffs (+0.78%), and robust aggregation defenses (Trimmed Mean, Coordinate Median) completely neutralize 20% Byzantine weight poisoning attacks — recovering from 57.03% to 90.02% accuracy. Future extensions will investigate asynchronous FL frameworks, heterogeneous model architectures, and homomorphic ciphertext computation.

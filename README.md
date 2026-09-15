@@ -163,6 +163,30 @@ All experiments were executed on 50 communication rounds across 10 clients with 
 
 > *Key Finding:* Comparing `dp_med_noise` (SecAgg OFF) vs `dp_secagg` (SecAgg ON) demonstrates **zero accuracy loss** (both 74.57%), confirming that pairwise masking provides mathematical confidentiality without utility cost.
 
+### 5.4 Adaptive Quantile Gradient Clipping
+
+| Experiment | Partition | DP ($\sigma$) | SecAgg | $\varepsilon$ | Test Accuracy | Macro F1 | ROC-AUC |
+|:---|:---|:---:|:---:|:---:|:---:|:---:|:---:|
+| **`dp_adaptive_clipping`** | IID | 1.0 | ON | 25.51 | **75.35%** | **0.7122** | **0.9122** |
+| **`dp_med_noise` (static)** | IID | 1.0 | OFF | 25.51 | 74.57% | 0.7040 | — |
+| **`noniid_dp_adaptive_clipping`** | Dir ($\alpha=0.1$) | 1.0 | ON | 25.51 | **54.12%** | **0.4149** | **0.7662** |
+| **`noniid_dp_secagg` (static)** | Dir ($\alpha=0.1$) | 1.0 | ON | 25.51 | 52.65% | 0.4041 | — |
+
+> *Insight:* Adaptive quantile clipping (Andrew et al., 2021) dynamically tunes $C_t$ to avoid premature signal destruction, yielding **+0.78%** accuracy on IID and **+1.47%** on extreme Non-IID, with identical privacy budget.
+
+### 5.5 Byzantine Robustness Under 20% Malicious Clients
+
+| Attack | Aggregation | Test Accuracy | Macro F1 | ROC-AUC | Impact |
+|:---|:---|:---:|:---:|:---:|:---|
+| **Label-Flip** | FedAvg | 89.58% | 0.8716 | 0.9763 | Minimal (-0.61%) |
+| **Label-Flip** | Trimmed Mean | **90.23%** | **0.8815** | 0.9784 | Fully mitigated |
+| **Label-Flip** | Median | 90.15% | 0.8804 | 0.9790 | Fully mitigated |
+| **Weight Poison** | FedAvg | 57.03% | 0.4420 | 0.7642 | **Catastrophic (-33.16%)** |
+| **Weight Poison** | Trimmed Mean | **90.02%** | **0.8830** | 0.9799 | **Fully recovered** |
+| **Weight Poison** | Median | 89.76% | 0.8799 | 0.9817 | **Fully recovered** |
+
+> *Key Finding:* Standard FedAvg collapses under model weight poisoning (57.03%). Both Trimmed Mean and Coordinate Median fully recover accuracy to ~90%, demonstrating provable Byzantine resilience.
+
 ---
 
 ## 6. Repository Structure
@@ -210,6 +234,7 @@ implementation/
 ├── test_privacy_integrity.py     # Unit tests for DP and SecAgg
 ├── test_robust_aggregation.py    # Unit tests for robust defenses
 ├── demo.py                       # Fast live demonstration script
+├── requirements.txt              # Python dependencies
 └── README.md
 ```
 
