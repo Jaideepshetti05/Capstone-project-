@@ -139,7 +139,7 @@ def main():
     with open(results_dir / "iid_fedavg_metrics.json") as f:
         iid = json.load(f)
     iid_acc = iid["locked_test_metrics"]["accuracy"]
-    results.append(check("IID FedAvg Test Acc ≥ 88%", iid_acc >= 0.88, f"{iid_acc*100:.2f}%"))
+    results.append(check("IID FedAvg Test Acc >= 88%", iid_acc >= 0.88, f"{iid_acc*100:.2f}%"))
 
     # Weight poison FedAvg should show collapse
     with open(results_dir / "attack_weightpoison_fedavg_metrics.json") as f:
@@ -151,13 +151,19 @@ def main():
     with open(results_dir / "attack_weightpoison_trimmed_mean_metrics.json") as f:
         wptm = json.load(f)
     wptm_acc = wptm["locked_test_metrics"]["accuracy"]
-    results.append(check("Weight Poison TrimmedMean recovery (≥85%)", wptm_acc >= 0.85, f"{wptm_acc*100:.2f}%"))
+    results.append(check("Weight Poison TrimmedMean recovery (>=85%)", wptm_acc >= 0.85, f"{wptm_acc*100:.2f}%"))
 
     # DP SecAgg should have finite epsilon
     with open(results_dir / "dp_secagg_metrics.json") as f:
         dp = json.load(f)
-    eps = dp.get("dp_epsilon", None)
-    results.append(check("DP+SecAgg has finite epsilon", eps is not None and eps < 100, f"ε = {eps}"))
+    pa = dp.get("privacy_accounting", {})
+    if isinstance(pa, dict):
+        eps = pa.get("epsilon", None)
+    elif isinstance(pa, list) and len(pa) > 0:
+        eps = pa[-1].get("cumulative_epsilon", None)
+    else:
+        eps = None
+    results.append(check("DP+SecAgg has finite epsilon", eps is not None and eps < 100, f"eps = {eps}"))
 
     # ─── Summary ───
     passed = sum(results)
